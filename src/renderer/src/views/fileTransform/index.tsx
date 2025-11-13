@@ -7,21 +7,18 @@ const FileTransformPage = (): React.JSX.Element => {
   const tabList = [
     {
       label: '图片',
-      value: 'image',
-      icon: <Image className="size-4" />,
-      url: ''
+      value: '.',
+      icon: <Image className="size-4" />
     },
     {
       label: '视频',
       value: 'video',
-      icon: <Video className="size-4" />,
-      url: 'video'
+      icon: <Video className="size-4" />
     },
     {
       label: '音频',
       value: 'audio',
-      icon: <Music2 className="size-4" />,
-      url: 'audio'
+      icon: <Music2 className="size-4" />
     }
   ]
   return (

@@ -4,7 +4,6 @@ interface Tab {
   label: string
   value: string
   icon: React.JSX.Element
-  url: string
 }
 interface Props {
   tabs: Tab[]
