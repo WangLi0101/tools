@@ -5,9 +5,18 @@ import { Button } from '@/components/ui/button'
 interface Props {
   onSelect: (file: File) => void
   className?: string
+  accept?: string
+  label?: string
+  showPreview?: boolean
 }
 
-const Uploader = ({ onSelect, className }: Props): React.JSX.Element => {
+const Uploader = ({
+  onSelect,
+  className,
+  accept = 'image/*',
+  label = '拖拽图片到此处，或点击选择文件',
+  showPreview = true
+}: Props): React.JSX.Element => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragActive, setDragActive] = useState(false)
   const [preview, setPreview] = useState<string>('')
@@ -69,14 +78,14 @@ const Uploader = ({ onSelect, className }: Props): React.JSX.Element => {
         )}
       >
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">拖拽图片到此处，或点击选择文件</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
           <Button variant="outline" size="sm">
             选择文件
           </Button>
         </div>
-        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onChange} />
+        <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={onChange} />
       </div>
-      {preview && (
+      {preview && showPreview && (
         <div className="rounded-md border p-2">
           <img src={`file://${preview}`} alt="预览" className="w-full h-auto rounded-md" />
         </div>

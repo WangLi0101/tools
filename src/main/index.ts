@@ -1,8 +1,9 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { ffmpegIPC } from '../preload/ffmpeg/ffmpegIPC'
+import fs from 'fs'
 
 function createWindow(): void {
   // Create the browser window.
@@ -56,6 +57,20 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
   ffmpegIPC()
+  ipcMain.handle('save-as', async (_event, args) => {
+    const { sourcePath, defaultPath, filters } = (args || {}) as {
+      sourcePath: string
+      defaultPath?: string
+      filters?: Array<{ name: string; extensions: string[] }>
+    }
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      defaultPath,
+      filters
+    })
+    if (canceled || !filePath) return { saved: false }
+    await fs.promises.copyFile(sourcePath, filePath)
+    return { saved: true, destPath: filePath }
+  })
   createWindow()
 
   app.on('activate', function () {

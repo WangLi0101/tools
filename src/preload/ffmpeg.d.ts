@@ -16,6 +16,35 @@ declare global {
           outputPath?: string
         }) => void
       ) => () => void
+      convertVideo: (options: {
+        inputPath: string
+        outputFormat: 'mp4' | 'webm' | 'mov' | 'mkv'
+        width?: number
+        height?: number
+        videoBitrate?: string
+        audioBitrate?: string
+      }) => Promise<{ outputPath: string }>
+      onConvertVideoStatus: (
+        listener: (payload: {
+          status: 'start' | 'progress' | 'done' | 'error'
+          progress?: number
+          message?: string
+          outputPath?: string
+        }) => void
+      ) => () => void
+      convertAudio: (options: {
+        inputPath: string
+        outputFormat: 'mp3' | 'aac' | 'wav' | 'flac' | 'ogg'
+        audioBitrate?: string
+      }) => Promise<{ outputPath: string }>
+      onConvertAudioStatus: (
+        listener: (payload: {
+          status: 'start' | 'progress' | 'done' | 'error'
+          progress?: number
+          message?: string
+          outputPath?: string
+        }) => void
+      ) => () => void
     }
   }
 }
