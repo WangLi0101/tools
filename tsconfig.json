@@ -8,5 +8,6 @@
         "./src/renderer/src/*"
       ]
     }
-  }
+  },
+  
 }

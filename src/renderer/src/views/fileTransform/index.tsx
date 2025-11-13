@@ -8,17 +8,20 @@ const FileTransformPage = (): React.JSX.Element => {
     {
       label: '图片',
       value: 'image',
-      icon: <Image className="size-4" />
+      icon: <Image className="size-4" />,
+      url: ''
     },
     {
       label: '视频',
       value: 'video',
-      icon: <Video className="size-4" />
+      icon: <Video className="size-4" />,
+      url: 'video'
     },
     {
       label: '音频',
       value: 'audio',
-      icon: <Music2 className="size-4" />
+      icon: <Music2 className="size-4" />,
+      url: 'audio'
     }
   ]
   return (

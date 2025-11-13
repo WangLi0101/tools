@@ -3,6 +3,7 @@ import HomePage from '@/views/home'
 import FileTransformPage from '@/views/fileTransform'
 import VideoPage from '@/views/fileTransform/video/page'
 import ImagePage from '@/views/fileTransform/image/page'
+import AudioPage from '@/views/fileTransform/audio/page'
 
 export const router = createHashRouter([
   {
@@ -21,6 +22,10 @@ export const router = createHashRouter([
       {
         path: 'video',
         element: <VideoPage />
+      },
+      {
+        path: 'audio',
+        element: <AudioPage />
       }
     ]
   }
