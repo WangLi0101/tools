@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { FileCog, Moon, Minus, X } from 'lucide-react'
 import { useTheme } from 'next-themes'
-
+import { version } from '../../../../../package.json'
 const Tool = (): React.JSX.Element => {
   const { setTheme, theme } = useTheme()
   const toggleDark = (): void => {
@@ -13,12 +13,13 @@ const Tool = (): React.JSX.Element => {
   const quit = (): void => {
     window.api.quit()
   }
+
   return (
     <div className="tool px-3 py-2  from-white/70 via-indigo-50/60 to-white/70 dark:from-muted/25 dark:via-muted/20 dark:to-muted/25 ring-1 ring-indigo-100/70 dark:ring-input shadow-sm flex items-center justify-between [-webkit-app-region:drag]">
       <div className="flex items-center gap-2 text-foreground">
         <FileCog className="size-5 text-primary" />
-        <span className="text-sm font-medium">文件工具箱</span>
-        <span className="text-sm text-primary">v0.0.1</span>
+        <span className="text-sm font-medium">工具箱</span>
+        <span className="text-sm text-primary">v{version}</span>
       </div>
       <div className="flex items-center gap-1 text-muted-foreground [-webkit-app-region:no-drag]">
         <Button
