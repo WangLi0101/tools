@@ -6,6 +6,8 @@ export interface Api {
   ) => Promise<{ saved: boolean; destPath?: string }>
   quit: () => void
   minimize: () => void
+  selectDirectory: () => Promise<{ canceled: boolean; path?: string }>
+  getDiskSpace: (dir: string) => Promise<{ totalBytes: number; freeBytes: number }>
 }
 
 export const api: Api = {
@@ -16,5 +18,7 @@ export const api: Api = {
       filters: options?.filters
     }),
   quit: () => ipcRenderer.send('quit'),
-  minimize: () => ipcRenderer.send('minimize-window')
+  minimize: () => ipcRenderer.send('minimize-window'),
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  getDiskSpace: (dir) => ipcRenderer.invoke('get-disk-space', dir)
 }

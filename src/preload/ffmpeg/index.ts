@@ -50,6 +50,23 @@ interface ConvertAudioStatus {
   message?: string
   outputPath?: string
 }
+interface M3u8TaskOptions {
+  taskId: string
+  url: string
+  outputDir: string
+  filename: string
+  format?: 'mp4' | 'ts'
+  headers?: Record<string, string>
+}
+interface M3u8Status {
+  taskId: string
+  status: 'start' | 'progress' | 'done' | 'error' | 'paused' | 'canceled'
+  progress?: number
+  speed?: string
+  bitrate?: string
+  message?: string
+  outputPath?: string
+}
 export interface FfmpegApi {
   convertImage: (options: ConvertImageOptions) => Promise<ConvertImageResult>
   onConvertImageStatus: (listener: (payload: ConvertImageStatus) => void) => () => void
@@ -68,6 +85,9 @@ export interface FfmpegApi {
     task: 'image' | 'video' | 'audio',
     listener: (payload: ConvertImageStatus | ConvertVideoStatus | ConvertAudioStatus) => void
   ) => () => void
+  startM3u8: (options: M3u8TaskOptions) => Promise<void>
+  cancelM3u8: (taskId: string) => Promise<void>
+  onM3u8Status: (listener: (payload: M3u8Status) => void) => () => void
 }
 
 export const ffmpegApi: FfmpegApi = {
@@ -118,5 +138,12 @@ export const ffmpegApi: FfmpegApi = {
     }
     ipcRenderer.on(channel, handler)
     return () => ipcRenderer.removeListener(channel, handler)
+  },
+  startM3u8: (options) => ipcRenderer.invoke('m3u8-start', options),
+  cancelM3u8: (taskId) => ipcRenderer.invoke('m3u8-cancel', taskId),
+  onM3u8Status: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
+    ipcRenderer.on('m3u8-status', handler)
+    return () => ipcRenderer.removeListener('m3u8-status', handler)
   }
 }

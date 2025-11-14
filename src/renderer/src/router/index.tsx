@@ -4,6 +4,7 @@ import FileTransformPage from '@/views/fileTransform'
 import VideoPage from '@/views/fileTransform/video/page'
 import ImagePage from '@/views/fileTransform/image/page'
 import AudioPage from '@/views/fileTransform/audio/page'
+import M3u8 from '@/views/m3u8'
 
 export const router = createHashRouter([
   {
@@ -27,5 +28,9 @@ export const router = createHashRouter([
         element: <AudioPage />
       }
     ]
+  },
+  {
+    path: '/m3u8',
+    element: <M3u8 />
   }
 ])
