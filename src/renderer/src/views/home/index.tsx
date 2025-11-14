@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { FileCog, PlayCircle, FileSliders } from 'lucide-react'
+import { FileCog, PlayCircle, FileSliders, FileDown } from 'lucide-react'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { cn } from '@/lib/utils'
 import { motion } from 'motion/react'
@@ -43,6 +43,13 @@ const HomePage = (): React.JSX.Element => {
       Icon: PlayCircle,
       url: '/m3u8',
       theme: 'emerald'
+    },
+    {
+      title: 'PDF生成',
+      description: '支持生成PDF文件',
+      Icon: FileDown,
+      url: '/pdf',
+      theme: 'blue'
     }
   ]
   const navigate = useNavigate()

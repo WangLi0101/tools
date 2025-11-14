@@ -2,6 +2,7 @@ import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { ffmpegApi } from './ffmpeg/index'
 import { api } from './api/index'
+import { playwrightApi } from './playwright'
 
 // Custom APIs for renderer
 
@@ -13,6 +14,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
     contextBridge.exposeInMainWorld('ffmpeg', ffmpegApi)
+    contextBridge.exposeInMainWorld('playwright', playwrightApi)
   } catch (error) {
     console.error(error)
   }
@@ -21,6 +23,8 @@ if (process.contextIsolated) {
   window.electron = electronAPI
   // @ts-ignore (define in dts)
   window.ffmpeg = ffmpegApi
+  // @ts-ignore (define in dts)
+  window.playwright = playwrightApi
   // @ts-ignore (define in dts)
   window.api = api
 }

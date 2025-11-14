@@ -9,6 +9,7 @@ import CompressImagePage from '@/views/fileCompress/image/page'
 import CompressVideoPage from '@/views/fileCompress/video/page'
 import CompressAudioPage from '@/views/fileCompress/audio/page'
 import M3u8 from '@/views/m3u8'
+import Pdf from '@/views/pdf'
 
 export const router = createHashRouter([
   {
@@ -54,5 +55,9 @@ export const router = createHashRouter([
   {
     path: '/m3u8',
     element: <M3u8 />
+  },
+  {
+    path: '/pdf',
+    element: <Pdf />
   }
 ])

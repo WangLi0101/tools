@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerFfmpegIPC } from '../preload/ffmpeg/ffmpegIPC'
+import { registerPlaywrightIPC } from '../preload/playwright/playwrightIPC'
 import { registerIpc } from '../preload/api/ipc'
 
 function createWindow(): void {
@@ -58,6 +59,7 @@ app.whenReady().then(() => {
   // IPC
   registerIpc()
   registerFfmpegIPC()
+  registerPlaywrightIPC()
 
   createWindow()
 
