@@ -500,7 +500,6 @@ export const registerFfmpegIPC = (): void => {
 
     proc.stdout.on('data', (data) => {
       const text = String(data)
-      console.log(`[M3U8 ${taskId}] stdout:`, text)
       const m = text.match(/out_time_ms=(\d+)/)
       if (m) {
         const v = Number(m[1])
@@ -510,7 +509,6 @@ export const registerFfmpegIPC = (): void => {
           if (durationSec && durationSec > 0) {
             // Normal progress calculation with duration
             const progress = Number(Math.min(99, (t / durationSec) * 100).toFixed(1))
-            console.log(`[M3U8 ${taskId}] Sending progress:`, progress)
             event.sender.send('m3u8-status', { taskId, status: 'progress', progress })
           } else {
             // Fallback: estimate progress based on time elapsed
@@ -520,7 +518,6 @@ export const registerFfmpegIPC = (): void => {
               // Gradually increase progress, but cap at 95% until completion
               const estimatedProgress = Math.min(95, lastProgress + 0.5)
               lastProgress = estimatedProgress
-              console.log(`[M3U8 ${taskId}] Sending estimated progress:`, estimatedProgress)
               event.sender.send('m3u8-status', {
                 taskId,
                 status: 'progress',
@@ -533,7 +530,6 @@ export const registerFfmpegIPC = (): void => {
     })
     proc.stderr.on('data', (data) => {
       const line = String(data)
-      console.log(`[M3U8 ${taskId}] stderr:`, line)
       const speed = line.match(/speed=\s*([\d.]+x)/)?.[1]
       const bitrate = line.match(/bitrate=\s*([\d.]+kbits\/s)/)?.[1]
       event.sender.send('m3u8-status', {
@@ -548,8 +544,6 @@ export const registerFfmpegIPC = (): void => {
       event.sender.send('m3u8-status', { taskId, status: 'error', message: String(err) })
     })
     proc.on('close', (code) => {
-      console.log(`[M3U8 ${taskId}] Process closed with code:`, code)
-
       // Clean up process state
       m3u8States.set(taskId, 'stopped')
 
@@ -559,17 +553,14 @@ export const registerFfmpegIPC = (): void => {
       }
 
       if (proc.killed) {
-        console.log(`[M3U8 ${taskId}] Process was killed`)
         event.sender.send('m3u8-status', { taskId, status: 'canceled' })
         return
       }
       if (code === 0 && fs.existsSync(outputPath)) {
         // Ensure progress shows 100% when completed
-        console.log(`[M3U8 ${taskId}] Sending completion status...`)
         event.sender.send('m3u8-status', { taskId, status: 'progress', progress: 100 })
         event.sender.send('m3u8-status', { taskId, status: 'done', outputPath })
       } else {
-        console.log(`[M3U8 ${taskId}] Sending error status...`)
         event.sender.send('m3u8-status', {
           taskId,
           status: 'error',
@@ -581,11 +572,9 @@ export const registerFfmpegIPC = (): void => {
   ipcMain.handle('m3u8-cancel', async (_event, taskId: string) => {
     const p = m3u8Procs.get(taskId)
     const state = m3u8States.get(taskId)
-    console.log(`[M3U8 ${taskId}] Cancel requested, process found:`, !!p, 'current state:', state)
 
     if (p && state !== 'stopped' && !p.killed) {
       try {
-        console.log(`[M3U8 ${taskId}] Killing process...`)
         // Use SIGTERM first, then SIGKILL if needed
         p.kill('SIGTERM')
         m3u8States.set(taskId, 'stopped')
@@ -593,12 +582,9 @@ export const registerFfmpegIPC = (): void => {
         // Give process time to terminate gracefully
         setTimeout(() => {
           if (!p.killed) {
-            console.log(`[M3U8 ${taskId}] Force killing process...`)
             p.kill('SIGKILL')
           }
         }, 1000)
-
-        console.log(`[M3U8 ${taskId}] Process termination initiated`)
       } catch (err) {
         console.error(`[M3U8 ${taskId}] Failed to kill process:`, err)
       }
