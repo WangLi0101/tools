@@ -14,12 +14,10 @@ const Uploader = ({
   onSelect,
   className,
   accept = 'image/*',
-  label = '拖拽图片到此处，或点击选择文件',
-  showPreview = true
+  label = '拖拽图片到此处，或点击选择文件'
 }: Props): React.JSX.Element => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragActive, setDragActive] = useState(false)
-  const [preview, setPreview] = useState<string>('')
 
   const open = useCallback(() => {
     inputRef.current?.click()
@@ -28,7 +26,6 @@ const Uploader = ({
   const handleFile = useCallback(
     (file?: File) => {
       if (!file) return
-      setPreview(file.path)
       onSelect(file)
     },
     [onSelect]
@@ -87,11 +84,6 @@ const Uploader = ({
         </div>
         <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={onChange} />
       </div>
-      {preview && showPreview && (
-        <div className="rounded-md border p-2 dark:border-input">
-          <img src={`file://${preview}`} alt="预览" className="w-full h-auto rounded-md" />
-        </div>
-      )}
     </div>
   )
 }
