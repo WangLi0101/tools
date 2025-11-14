@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { motion } from 'motion/react'
 
 type TaskStatus = 'queued' | 'waiting' | 'downloading' | 'paused' | 'done' | 'error' | 'canceled'
 interface Task {
@@ -39,9 +40,6 @@ const M3u8 = (): React.JSX.Element => {
   const unsubRef = useRef<(() => void) | undefined>(undefined)
 
   useEffect(() => {
-    // Register the event listener immediately when component mounts
-    console.log('Registering M3u8Status listener...')
-
     const unsubscribe = window.ffmpeg.onM3u8Status((p: any) => {
       const { taskId, status, progress, speed, bitrate, outputPath, message } = p
 
@@ -158,11 +156,16 @@ const M3u8 = (): React.JSX.Element => {
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
 
   return (
-    <div className=" w-full overflow-x-hidden">
+    <motion.div
+      className="w-full overflow-x-hidden"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="mx-auto max-w-3xl px-3 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-            <PlayCircle className="size-6" />
+            <PlayCircle className="size-6 text-emerald-600 dark:text-emerald-400" />
             m3u8下载
           </h2>
           <GoHome />
@@ -275,7 +278,7 @@ const M3u8 = (): React.JSX.Element => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </motion.div>
   )
 }
 export default M3u8

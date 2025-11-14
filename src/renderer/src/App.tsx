@@ -9,7 +9,7 @@ function App(): React.JSX.Element {
       <div className="h-screen flex flex-col overflow-auto bg-background">
         <Tool />
         <div className="flex-1 overflow-auto p-3">
-          <div className="min-h-full bg-white border border-input rounded-md dark:bg-muted dark:border-input">
+          <div className="min-h-full bg-card border border-input rounded-md">
             <RouterProvider router={router} />
           </div>
         </div>
