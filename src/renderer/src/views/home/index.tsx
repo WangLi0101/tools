@@ -18,7 +18,7 @@ const HomePage = (): React.JSX.Element => {
     navigate(url)
   }
   return (
-    <div className="w-full overflow-x-hidden ">
+    <div className="w-full overflow-x-hidden">
       <div className="px-3 py-8">
         <div className="mb-5">
           <h1 className="text-xl font-semibold text-foreground">常用工具</h1>

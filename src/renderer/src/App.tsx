@@ -8,8 +8,8 @@ function App(): React.JSX.Element {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <div className="h-screen flex flex-col overflow-auto bg-background">
         <Tool />
-        <div className="flex-1 overflow-auto px-3">
-          <div className="h-full">
+        <div className="flex-1 overflow-auto p-3">
+          <div className="min-h-full bg-white border border-input rounded-md dark:bg-muted dark:border-input">
             <RouterProvider router={router} />
           </div>
         </div>

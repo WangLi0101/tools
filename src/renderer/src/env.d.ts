@@ -1,4 +1,7 @@
 /// <reference types="vite/client" />
-interface File extends File {
-  path: string
+
+declare global {
+  interface File extends File {
+    path: string
+  }
 }

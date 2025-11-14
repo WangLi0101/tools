@@ -1,15 +1,11 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import type { Api } from 'Api'
+import type { FfmpegApi } from 'ffmpeg'
 
 declare global {
   interface Window {
     electron: ElectronAPI
-    api: {
-      saveAs: (
-        sourcePath: string,
-        options?: { defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }
-      ) => Promise<{ saved: boolean; destPath?: string }>
-      quit: () => void
-      minimize: () => void
-    }
+    ffmpeg: FfmpegApi
+    api: Api
   }
 }

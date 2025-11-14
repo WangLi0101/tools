@@ -50,7 +50,7 @@ interface ConvertAudioStatus {
   message?: string
   outputPath?: string
 }
-interface FfmpegApi {
+export interface FfmpegApi {
   convertImage: (options: ConvertImageOptions) => Promise<ConvertImageResult>
   onConvertImageStatus: (listener: (payload: ConvertImageStatus) => void) => () => void
   convertVideo: (options: ConvertVideoOptions) => Promise<ConvertVideoResult>

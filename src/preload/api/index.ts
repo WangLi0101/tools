@@ -1,10 +1,15 @@
 import { ipcRenderer } from 'electron'
-
-export const api = {
+export interface Api {
   saveAs: (
     sourcePath: string,
     options?: { defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }
-  ): Promise<{ saved: boolean; destPath?: string }> =>
+  ) => Promise<{ saved: boolean; destPath?: string }>
+  quit: () => void
+  minimize: () => void
+}
+
+export const api: Api = {
+  saveAs: (sourcePath, options): Promise<{ saved: boolean; destPath?: string }> =>
     ipcRenderer.invoke('save-as', {
       sourcePath,
       defaultPath: options?.defaultPath,
