@@ -138,7 +138,14 @@ const M3u8 = (): React.JSX.Element => {
     window.ffmpeg.cancelM3u8(id)
     setTasks((prev) => prev.filter((x) => x.id !== id))
   }
-
+  const clearTasks = (): void => {
+    for (const t of tasks) {
+      if (t.status === 'downloading') {
+        window.ffmpeg.cancelM3u8(t.id)
+      }
+    }
+    setTasks([])
+  }
   useEffect(() => {
     const errs = tasks.filter((t) => t.status === 'error')
     if (errs.length) {
@@ -226,7 +233,7 @@ const M3u8 = (): React.JSX.Element => {
                 <Download className="size-4" />
                 加入队列并开始
               </Button>
-              <Button variant="outline" onClick={() => setTasks([])}>
+              <Button variant="outline" onClick={clearTasks}>
                 <Trash2 className="size-4" />
                 清空队列
               </Button>
