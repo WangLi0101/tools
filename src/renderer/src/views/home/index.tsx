@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { FileCog, PlayCircle } from 'lucide-react'
+import { FileCog, PlayCircle, FileSliders } from 'lucide-react'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { cn } from '@/lib/utils'
 import { motion } from 'motion/react'
@@ -26,7 +26,7 @@ const HomePage = (): React.JSX.Element => {
     {
       title: '文件转换',
       description: '轻松转换各种文件格式，支持图像、视频、音频',
-      Icon: FileCog,
+      Icon: FileSliders,
       url: '/fileTransForm',
       theme: 'blue'
     },
