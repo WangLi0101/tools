@@ -161,7 +161,7 @@ export interface FfmpegApi {
   cancelM3u8: (taskId: string) => Promise<void>
   onM3u8Status: (listener: (payload: M3u8Status) => void) => () => void
 
-  mergeVideos: (options: { inputDir: string; outputDir: string }) => Promise<void>
+  mergeVideos: (options: { inputDir: string; outputDir: string; formats?: string[] }) => Promise<void>
   cancelVideoMerge: () => Promise<void>
   onVideoMergeStatus: (listener: (payload: { status: 'start' | 'progress' | 'done' | 'error' | 'canceled'; progress?: number; message?: string; outputPath?: string; total?: number }) => void) => () => void
 }

@@ -4,18 +4,22 @@ import { Video, FolderOpen, Play, X, FileText } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 
 const VideoMergePage = () => {
   const [inputDir, setInputDir] = useState<string>('')
-  const [outputDir, setOutputDir] = useState<string>(() => localStorage.getItem('merge.outDir') || '')
+  const [outputDir, setOutputDir] = useState<string>(
+    () => localStorage.getItem('merge.outDir') || ''
+  )
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
   const [progress, setProgress] = useState<number | undefined>(undefined)
   const [running, setRunning] = useState<boolean>(false)
   const [status, setStatus] = useState<string>('')
   const [outputPath, setOutputPath] = useState<string>('')
   const [total, setTotal] = useState<number>(0)
+  const [selectedFormats, setSelectedFormats] = useState<string[]>(['mp4'])
   const unsubRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -56,7 +60,10 @@ const VideoMergePage = () => {
   }, [])
 
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
-  const canRun = useMemo(() => !!inputDir && !!outputDir && !running, [inputDir, outputDir, running])
+  const canRun = useMemo(
+    () => !!inputDir && !!outputDir && selectedFormats.length > 0 && !running,
+    [inputDir, outputDir, selectedFormats.length, running]
+  )
 
   const chooseInputDir = async (): Promise<void> => {
     const r = await window.api.selectDirectory()
@@ -85,7 +92,7 @@ const VideoMergePage = () => {
     }
     setStatus('准备合并')
     setOutputPath('')
-    await window.ffmpeg.mergeVideos({ inputDir, outputDir })
+    await window.ffmpeg.mergeVideos({ inputDir, outputDir, formats: selectedFormats })
   }
 
   const onCancel = async (): Promise<void> => {
@@ -134,6 +141,37 @@ const VideoMergePage = () => {
               </div>
               <div className="text-xs text-muted-foreground">
                 可用空间：{fmtBytes(disk.free)} / 总空间：{fmtBytes(disk.total)}
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground mb-2">视频检索格式</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    'mp4',
+                    'm4v',
+                    'mov',
+                    'avi',
+                    'mkv',
+                    'webm',
+                    'ts',
+                    'mts',
+                    'm2ts',
+                    'flv',
+                    'wmv'
+                  ].map((fmt) => (
+                    <label key={fmt} className="flex items-center gap-2 text-xs">
+                      <Checkbox
+                        checked={selectedFormats.includes(fmt)}
+                        onCheckedChange={(checked) => {
+                          setSelectedFormats((prev) => {
+                            if (checked === true) return Array.from(new Set([...prev, fmt]))
+                            return prev.filter((x) => x !== fmt)
+                          })
+                        }}
+                      />
+                      <span>{fmt}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
 

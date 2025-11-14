@@ -647,9 +647,13 @@ export const registerFfmpegIPC = (): void => {
   })
 
   ipcMain.handle('videoMerge-start', async (event, args) => {
-    const { inputDir, outputDir } = (args || {}) as { inputDir: string; outputDir: string }
+    const { inputDir, outputDir, formats } = (args || {}) as {
+      inputDir: string
+      outputDir: string
+      formats?: string[]
+    }
     const channel = 'videoMerge-status'
-    const videoExts = [
+    const defaultExts = [
       '.mp4',
       '.m4v',
       '.mov',
@@ -662,8 +666,18 @@ export const registerFfmpegIPC = (): void => {
       '.flv',
       '.wmv'
     ]
+    const exts = (Array.isArray(formats) && formats.length
+      ? Array.from(
+          new Set(
+            formats
+              .map((s) => String(s || '').trim().toLowerCase())
+              .filter(Boolean)
+              .map((s) => (s.startsWith('.') ? s : `.${s}`))
+          )
+        )
+      : defaultExts)
 
-    const isVideoFile = (p: string): boolean => videoExts.includes(path.extname(p).toLowerCase())
+    const isVideoFile = (p: string): boolean => exts.includes(path.extname(p).toLowerCase())
 
     const scanRecursive = async (dir: string): Promise<string[]> => {
       const res: string[] = []
