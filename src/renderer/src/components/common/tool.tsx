@@ -45,7 +45,7 @@ const Tool = (): React.JSX.Element => {
           size="icon-sm"
           aria-label="关闭"
           onClick={quit}
-          className="hover:bg-destructive/10 [-webkit-app-region:no-drag]"
+          className="[-webkit-app-region:no-drag]"
         >
           <X className="size-4" />
         </Button>
