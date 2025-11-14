@@ -1,12 +1,21 @@
 import { RouterProvider } from 'react-router-dom'
 import { router } from './router'
 import { Toaster } from '@/components/ui/sonner'
+import Tool from './components/common/tool'
+import { ThemeProvider } from 'next-themes'
 function App(): React.JSX.Element {
   return (
-    <div>
-      <RouterProvider router={router} />
-      <Toaster />
-    </div>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <div className="h-screen flex flex-col overflow-auto bg-background">
+        <Tool />
+        <div className="flex-1 overflow-auto px-3">
+          <div className="h-full">
+            <RouterProvider router={router} />
+          </div>
+        </div>
+        <Toaster />
+      </div>
+    </ThemeProvider>
   )
 }
 

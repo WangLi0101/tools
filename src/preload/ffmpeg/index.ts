@@ -57,6 +57,9 @@ interface FfmpegApi {
   onConvertVideoStatus: (listener: (payload: ConvertVideoStatus) => void) => () => void
   convertAudio: (options: ConvertAudioOptions) => Promise<ConvertAudioResult>
   onConvertAudioStatus: (listener: (payload: ConvertAudioStatus) => void) => () => void
+  cancelImage: () => Promise<void>
+  cancelVideo: () => Promise<void>
+  cancelAudio: () => Promise<void>
   convertMedia: (
     task: 'image' | 'video' | 'audio',
     options: ConvertImageOptions | ConvertVideoOptions | ConvertAudioOptions
@@ -92,6 +95,9 @@ export const ffmpegApi: FfmpegApi = {
     ipcRenderer.on('convertAudio-status', handler)
     return () => ipcRenderer.removeListener('convertAudio-status', handler)
   },
+  cancelImage: () => ipcRenderer.invoke('cancelImage'),
+  cancelVideo: () => ipcRenderer.invoke('cancelVideo'),
+  cancelAudio: () => ipcRenderer.invoke('cancelAudio'),
   convertMedia: (task, options) => {
     const map = {
       image: 'convertImage',

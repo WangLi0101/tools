@@ -14,7 +14,7 @@ declare module 'ffmpeg' {
   }
 
   interface ConvertImageStatus {
-    status: 'start' | 'progress' | 'done' | 'error'
+    status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
     progress?: number
     message?: string
     outputPath?: string
@@ -33,7 +33,7 @@ declare module 'ffmpeg' {
     outputPath: string
   }
   interface ConvertVideoStatus {
-    status: 'start' | 'progress' | 'done' | 'error'
+    status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
     progress?: number
     message?: string
     outputPath?: string
@@ -49,7 +49,7 @@ declare module 'ffmpeg' {
     outputPath: string
   }
   interface ConvertAudioStatus {
-    status: 'start' | 'progress' | 'done' | 'error'
+    status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
     progress?: number
     message?: string
     outputPath?: string
@@ -58,10 +58,13 @@ declare module 'ffmpeg' {
   interface FfmpegApi {
     convertImage: (options: ConvertImageOptions) => Promise<ConvertImageResult>
     onConvertImageStatus: (listener: (payload: ConvertImageStatus) => void) => () => void
+    cancelImage: () => Promise<void>
     convertVideo: (options: ConvertVideoOptions) => Promise<ConvertVideoResult>
     onConvertVideoStatus: (listener: (payload: ConvertVideoStatus) => void) => () => void
+    cancelVideo: () => Promise<void>
     convertAudio: (options: ConvertAudioOptions) => Promise<ConvertAudioResult>
     onConvertAudioStatus: (listener: (payload: ConvertAudioStatus) => void) => () => void
+    cancelAudio: () => Promise<void>
     convertMedia: (
       task: 'image' | 'video' | 'audio',
       options: ConvertImageOptions | ConvertVideoOptions | ConvertAudioOptions

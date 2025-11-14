@@ -8,6 +8,8 @@ declare global {
         sourcePath: string,
         options?: { defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }
       ) => Promise<{ saved: boolean; destPath?: string }>
+      quit: () => void
+      minimize: () => void
     }
   }
 }

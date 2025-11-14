@@ -74,7 +74,9 @@ const Uploader = ({
         onDragLeave={onDragLeave}
         className={cn(
           'border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors',
-          dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
+          dragActive
+            ? 'border-primary bg-primary/5 dark:bg-primary/10'
+            : 'border-muted-foreground/30 dark:border-muted-foreground/20'
         )}
       >
         <div className="space-y-2">
@@ -86,7 +88,7 @@ const Uploader = ({
         <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={onChange} />
       </div>
       {preview && showPreview && (
-        <div className="rounded-md border p-2">
+        <div className="rounded-md border p-2 dark:border-input">
           <img src={`file://${preview}`} alt="预览" className="w-full h-auto rounded-md" />
         </div>
       )}

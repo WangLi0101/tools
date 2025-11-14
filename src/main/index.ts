@@ -1,9 +1,9 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { ffmpegIPC } from '../preload/ffmpeg/ffmpegIPC'
-import fs from 'fs'
+import { registerFfmpegIPC } from '../preload/ffmpeg/ffmpegIPC'
+import { registerIpc } from '../preload/api/ipc'
 
 function createWindow(): void {
   // Create the browser window.
@@ -12,6 +12,7 @@ function createWindow(): void {
     height: 660,
     resizable: false, // 禁止调整窗口大小
     maximizable: false, // 禁止最大化
+    frame: false, // Add this line to remove the default frame
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -56,21 +57,9 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
-  ffmpegIPC()
-  ipcMain.handle('save-as', async (_event, args) => {
-    const { sourcePath, defaultPath, filters } = (args || {}) as {
-      sourcePath: string
-      defaultPath?: string
-      filters?: Array<{ name: string; extensions: string[] }>
-    }
-    const { canceled, filePath } = await dialog.showSaveDialog({
-      defaultPath,
-      filters
-    })
-    if (canceled || !filePath) return { saved: false }
-    await fs.promises.copyFile(sourcePath, filePath)
-    return { saved: true, destPath: filePath }
-  })
+  registerIpc()
+  registerFfmpegIPC()
+
   createWindow()
 
   app.on('activate', function () {

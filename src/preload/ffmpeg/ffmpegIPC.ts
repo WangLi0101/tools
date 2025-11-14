@@ -3,6 +3,10 @@ import { spawn, spawnSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 
+let currentImageProc: any
+let currentVideoProc: any
+let currentAudioProc: any
+
 const hmsToSeconds = (h: number, m: number, s: number): number => h * 3600 + m * 60 + s
 
 const parseTimeFromLine = (line: string): number | undefined => {
@@ -42,11 +46,13 @@ const runFfmpeg = (
   channel: string,
   args: string[],
   outputPath: string,
-  inputPath?: string
+  inputPath?: string,
+  onSpawn?: (p: any) => void
 ): Promise<void> => {
   const durationSec = inputPath ? probeDurationSeconds(inputPath) : undefined
   return new Promise<void>((resolve, reject) => {
     const proc = spawn('ffmpeg', args)
+    if (onSpawn) onSpawn(proc)
     proc.stderr.on('data', (data) => {
       const line = String(data)
       let progress: number | undefined
@@ -62,6 +68,11 @@ const runFfmpeg = (
       reject(err)
     })
     proc.on('close', (code) => {
+      if (proc.killed) {
+        event.sender.send(channel, { status: 'canceled' })
+        resolve()
+        return
+      }
       if (code === 0 && fs.existsSync(outputPath)) {
         event.sender.send(channel, { status: 'done', outputPath })
         resolve()
@@ -74,7 +85,7 @@ const runFfmpeg = (
   })
 }
 
-export const ffmpegIPC = (): void => {
+export const registerFfmpegIPC = (): void => {
   ipcMain.handle('convertImage', async (event, args) => {
     const { inputPath, outputFormat, quality, width, height } = args as {
       inputPath: string
@@ -119,7 +130,9 @@ export const ffmpegIPC = (): void => {
 
     ffArgs.push(outputPath)
 
-    await runFfmpeg(event, 'convertImage-status', ffArgs, outputPath, inputPath)
+    await runFfmpeg(event, 'convertImage-status', ffArgs, outputPath, inputPath, (p) => {
+      currentImageProc = p
+    })
 
     return { outputPath }
   })
@@ -172,7 +185,9 @@ export const ffmpegIPC = (): void => {
 
     ffArgs.push(outputPath)
 
-    await runFfmpeg(event, 'convertVideo-status', ffArgs, outputPath, inputPath)
+    await runFfmpeg(event, 'convertVideo-status', ffArgs, outputPath, inputPath, (p) => {
+      currentVideoProc = p
+    })
 
     return { outputPath }
   })
@@ -203,8 +218,40 @@ export const ffmpegIPC = (): void => {
 
     ffArgs.push(outputPath)
 
-    await runFfmpeg(event, 'convertAudio-status', ffArgs, outputPath, inputPath)
+    await runFfmpeg(event, 'convertAudio-status', ffArgs, outputPath, inputPath, (p) => {
+      currentAudioProc = p
+    })
 
     return { outputPath }
+  })
+
+  ipcMain.handle('cancelImage', async () => {
+    if (currentImageProc) {
+      try {
+        currentImageProc.kill('SIGINT')
+      } finally {
+        currentImageProc = null
+      }
+    }
+  })
+
+  ipcMain.handle('cancelVideo', async () => {
+    if (currentVideoProc) {
+      try {
+        currentVideoProc.kill('SIGINT')
+      } finally {
+        currentVideoProc = null
+      }
+    }
+  })
+
+  ipcMain.handle('cancelAudio', async () => {
+    if (currentAudioProc) {
+      try {
+        currentAudioProc.kill('SIGINT')
+      } finally {
+        currentAudioProc = null
+      }
+    }
   })
 }

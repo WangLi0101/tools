@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
 import { Download } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Select,
   SelectTrigger,
@@ -44,10 +45,17 @@ const AudioPage = (): React.JSX.Element => {
         setStatus('转换完成')
         setProgress(100)
         if (payload.outputPath) setOutputPath(payload.outputPath)
+        toast.success(`转换完成：${payload.outputPath ?? ''}`)
+      } else if (payload.status === 'canceled') {
+        setRunning(false)
+        setStatus('已取消')
+        setProgress(undefined)
+        toast.info('已取消')
       } else if (payload.status === 'error') {
         setRunning(false)
         setStatus(payload.message ?? '转换失败')
         setProgress(undefined)
+        toast.error(`转换失败：${payload.message ?? ''}`)
       }
     })
     return () => {
@@ -84,6 +92,11 @@ const AudioPage = (): React.JSX.Element => {
     const filters = [{ name: ext.toUpperCase(), extensions: [ext] }]
     const res = await window.api.saveAs(outputPath, { defaultPath: outputPath, filters })
     if (res.saved) setStatus(`已另存为：${res.destPath}`)
+  }
+
+  const onCancel = async (): Promise<void> => {
+    if (!running) return
+    await window.ffmpeg.cancelAudio()
   }
 
   return (
@@ -144,6 +157,9 @@ const AudioPage = (): React.JSX.Element => {
             <Button onClick={onConvert} disabled={!canConvert} className="w-full">
               {running ? '处理中...' : '开始转换'}
             </Button>
+            <Button onClick={onCancel} disabled={!running} variant="destructive" className="w-full">
+              取消
+            </Button>
             <Button
               onClick={onSaveAs}
               disabled={!outputPath || running}
@@ -174,7 +190,7 @@ const AudioPage = (): React.JSX.Element => {
               {file ? (
                 <audio controls src={`file://${file.path}`} className="w-full" />
               ) : (
-                <div className="h-40 rounded-md border flex items-center justify-center text-sm text-muted-foreground">
+                <div className="h-40 rounded-md border dark:border-input flex items-center justify-center text-sm text-muted-foreground">
                   无文件
                 </div>
               )}
@@ -184,7 +200,7 @@ const AudioPage = (): React.JSX.Element => {
               {outputPath ? (
                 <audio controls src={encodeURI(`file://${outputPath}`)} className="w-full" />
               ) : (
-                <div className="h-40 rounded-md border flex items-center justify-center text-sm text-muted-foreground">
+                <div className="h-40 rounded-md border dark:border-input flex items-center justify-center text-sm text-muted-foreground">
                   暂无结果
                 </div>
               )}

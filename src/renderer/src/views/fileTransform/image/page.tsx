@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
 
 type ImageFormat = 'jpg' | 'png' | 'webp' | 'gif'
 
@@ -46,10 +47,12 @@ const ImagePage = (): React.JSX.Element => {
         setStatus('转换完成')
         setProgress(100)
         if (payload.outputPath) setOutputPath(payload.outputPath)
+        toast.success(`转换完成：${payload.outputPath ?? ''}`)
       } else if (payload.status === 'error') {
         setRunning(false)
         setStatus(payload.message ?? '转换失败')
         setProgress(undefined)
+        toast.error(`转换失败：${payload.message ?? ''}`)
       }
     })
     return () => {

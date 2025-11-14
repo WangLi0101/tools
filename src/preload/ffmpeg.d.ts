@@ -10,12 +10,13 @@ declare global {
       }) => Promise<{ outputPath: string }>
       onConvertImageStatus: (
         listener: (payload: {
-          status: 'start' | 'progress' | 'done' | 'error'
+          status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
           progress?: number
           message?: string
           outputPath?: string
         }) => void
       ) => () => void
+      cancelImage: () => Promise<void>
       convertVideo: (options: {
         inputPath: string
         outputFormat: 'mp4' | 'webm' | 'mov' | 'mkv'
@@ -26,12 +27,13 @@ declare global {
       }) => Promise<{ outputPath: string }>
       onConvertVideoStatus: (
         listener: (payload: {
-          status: 'start' | 'progress' | 'done' | 'error'
+          status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
           progress?: number
           message?: string
           outputPath?: string
         }) => void
       ) => () => void
+      cancelVideo: () => Promise<void>
       convertAudio: (options: {
         inputPath: string
         outputFormat: 'mp3' | 'aac' | 'wav' | 'flac' | 'ogg'
@@ -39,14 +41,13 @@ declare global {
       }) => Promise<{ outputPath: string }>
       onConvertAudioStatus: (
         listener: (payload: {
-          status: 'start' | 'progress' | 'done' | 'error'
+          status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
           progress?: number
           message?: string
           outputPath?: string
         }) => void
       ) => () => void
+      cancelAudio: () => Promise<void>
     }
   }
 }
-
-export {}
