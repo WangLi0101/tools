@@ -13,6 +13,12 @@ const HomePage = (): React.JSX.Element => {
       url: '/fileTransForm'
     },
     {
+      title: '文件压缩',
+      description: '轻松压缩各种文件格式，支持图像、视频、音频',
+      icon: <FileCog className="size-6 " />,
+      url: '/fileCompress'
+    },
+    {
       title: 'm3u8下载',
       description: '支持m3u8视频下载',
       icon: <PlayCircle className="size-6" />,

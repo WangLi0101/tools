@@ -50,6 +50,70 @@ interface ConvertAudioStatus {
   message?: string
   outputPath?: string
 }
+
+type CompressImageFormat = 'jpg' | 'png' | 'webp'
+interface CompressImageOptions {
+  inputPath: string
+  outputFormat: CompressImageFormat
+  quality?: number
+  width?: number
+  height?: number
+}
+interface CompressImageResult {
+  outputPath: string
+}
+interface CompressImageStatus {
+  status: 'start' | 'progress' | 'done' | 'error'
+  progress?: number
+  message?: string
+  outputPath?: string
+}
+
+type CompressVideoFormat = 'mp4' | 'webm'
+interface CompressVideoOptions {
+  inputPath: string
+  outputFormat: CompressVideoFormat
+  width?: number
+  height?: number
+  crf?: number
+  preset?:
+    | 'ultrafast'
+    | 'superfast'
+    | 'veryfast'
+    | 'faster'
+    | 'fast'
+    | 'medium'
+    | 'slow'
+    | 'slower'
+    | 'veryslow'
+  audioBitrate?: string
+}
+interface CompressVideoResult {
+  outputPath: string
+}
+interface CompressVideoStatus {
+  status: 'start' | 'progress' | 'done' | 'error'
+  progress?: number
+  message?: string
+  outputPath?: string
+}
+
+type CompressAudioFormat = 'mp3' | 'aac' | 'ogg'
+interface CompressAudioOptions {
+  inputPath: string
+  outputFormat: CompressAudioFormat
+  audioBitrate?: string
+}
+interface CompressAudioResult {
+  outputPath: string
+}
+interface CompressAudioStatus {
+  status: 'start' | 'progress' | 'done' | 'error'
+  progress?: number
+  message?: string
+  outputPath?: string
+}
+
 interface M3u8TaskOptions {
   taskId: string
   url: string
@@ -85,6 +149,14 @@ export interface FfmpegApi {
     task: 'image' | 'video' | 'audio',
     listener: (payload: ConvertImageStatus | ConvertVideoStatus | ConvertAudioStatus) => void
   ) => () => void
+
+  compressImage: (options: CompressImageOptions) => Promise<CompressImageResult>
+  onCompressImageStatus: (listener: (payload: CompressImageStatus) => void) => () => void
+  compressVideo: (options: CompressVideoOptions) => Promise<CompressVideoResult>
+  onCompressVideoStatus: (listener: (payload: CompressVideoStatus) => void) => () => void
+  compressAudio: (options: CompressAudioOptions) => Promise<CompressAudioResult>
+  onCompressAudioStatus: (listener: (payload: CompressAudioStatus) => void) => () => void
+
   startM3u8: (options: M3u8TaskOptions) => Promise<void>
   cancelM3u8: (taskId: string) => Promise<void>
   onM3u8Status: (listener: (payload: M3u8Status) => void) => () => void
@@ -139,6 +211,26 @@ export const ffmpegApi: FfmpegApi = {
     ipcRenderer.on(channel, handler)
     return () => ipcRenderer.removeListener(channel, handler)
   },
+
+  compressImage: (options) => ipcRenderer.invoke('compressImage', options),
+  onCompressImageStatus: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
+    ipcRenderer.on('compressImage-status', handler)
+    return () => ipcRenderer.removeListener('compressImage-status', handler)
+  },
+  compressVideo: (options) => ipcRenderer.invoke('compressVideo', options),
+  onCompressVideoStatus: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
+    ipcRenderer.on('compressVideo-status', handler)
+    return () => ipcRenderer.removeListener('compressVideo-status', handler)
+  },
+  compressAudio: (options) => ipcRenderer.invoke('compressAudio', options),
+  onCompressAudioStatus: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
+    ipcRenderer.on('compressAudio-status', handler)
+    return () => ipcRenderer.removeListener('compressAudio-status', handler)
+  },
+
   startM3u8: (options) => ipcRenderer.invoke('m3u8-start', options),
   cancelM3u8: (taskId) => ipcRenderer.invoke('m3u8-cancel', taskId),
   onM3u8Status: (listener) => {

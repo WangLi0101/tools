@@ -301,6 +301,160 @@ export const registerFfmpegIPC = (): void => {
     return { outputPath }
   })
 
+  ipcMain.handle('compressImage', async (event, args) => {
+    const { inputPath, outputFormat, quality, width, height } = args as {
+      inputPath: string
+      outputFormat: 'jpg' | 'png' | 'webp'
+      quality?: number
+      width?: number
+      height?: number
+    }
+
+    const dir = path.dirname(inputPath)
+    const base = path.basename(inputPath, path.extname(inputPath))
+    const ext = outputFormat
+    const outputPath = path.join(dir, `${base}_compressed.${ext}`)
+
+    event.sender.send('compressImage-status', { status: 'start' })
+
+    const ffArgs: string[] = ['-y', '-i', inputPath]
+
+    if (typeof width === 'number' || typeof height === 'number') {
+      const w = typeof width === 'number' ? width : -1
+      const h = typeof height === 'number' ? height : -1
+      ffArgs.push('-vf', `scale=${w}:${h}`)
+    }
+
+    ffArgs.push('-map_metadata', '-1')
+
+    if (ext === 'jpg') {
+      if (typeof quality === 'number') {
+        const q = Math.max(2, Math.min(31, Math.round(31 - (quality / 100) * 29)))
+        ffArgs.push('-q:v', String(q))
+      }
+    }
+    if (ext === 'png') {
+      ffArgs.push('-compression_level', '9')
+    }
+    if (ext === 'webp') {
+      ffArgs.push('-c:v', 'libwebp')
+      if (typeof quality === 'number') {
+        ffArgs.push('-quality', String(Math.max(0, Math.min(100, Math.round(quality)))))
+      } else {
+        ffArgs.push('-quality', '80')
+      }
+    }
+
+    ffArgs.push(outputPath)
+
+    await runFfmpeg(event, 'compressImage-status', ffArgs, outputPath, inputPath, (p) => {
+      currentImageProc = p
+    })
+
+    return { outputPath }
+  })
+
+  ipcMain.handle('compressVideo', async (event, args) => {
+    const {
+      inputPath,
+      outputFormat,
+      width,
+      height,
+      crf = 28,
+      preset = 'medium',
+      audioBitrate
+    } = (args || {}) as {
+      inputPath: string
+      outputFormat: 'mp4' | 'webm'
+      width?: number
+      height?: number
+      crf?: number
+      preset?:
+        | 'ultrafast'
+        | 'superfast'
+        | 'veryfast'
+        | 'faster'
+        | 'fast'
+        | 'medium'
+        | 'slow'
+        | 'slower'
+        | 'veryslow'
+      audioBitrate?: string
+    }
+
+    const dir = path.dirname(inputPath)
+    const base = path.basename(inputPath, path.extname(inputPath))
+    const ext = outputFormat
+    const outputPath = path.join(dir, `${base}_compressed.${ext}`)
+
+    event.sender.send('compressVideo-status', { status: 'start' })
+
+    const ffArgs: string[] = ['-y', '-i', inputPath]
+
+    if (typeof width === 'number' || typeof height === 'number') {
+      const w = typeof width === 'number' ? width : -1
+      const h = typeof height === 'number' ? height : -1
+      ffArgs.push('-vf', `scale=${w}:${h}`)
+    }
+
+    ffArgs.push('-map_metadata', '-1')
+
+    if (ext === 'mp4') {
+      ffArgs.push('-c:v', 'libx264')
+      ffArgs.push('-preset', preset)
+      ffArgs.push('-crf', String(Math.max(0, Math.min(51, Math.round(crf)))))
+      ffArgs.push('-c:a', 'aac')
+      if (audioBitrate) ffArgs.push('-b:a', audioBitrate)
+      ffArgs.push('-movflags', '+faststart')
+    }
+    if (ext === 'webm') {
+      ffArgs.push('-c:v', 'libvpx-vp9')
+      ffArgs.push('-crf', String(Math.max(0, Math.min(63, Math.round(crf)))))
+      ffArgs.push('-b:v', '0')
+      ffArgs.push('-c:a', 'libopus')
+      if (audioBitrate) ffArgs.push('-b:a', audioBitrate)
+    }
+
+    ffArgs.push(outputPath)
+
+    await runFfmpeg(event, 'compressVideo-status', ffArgs, outputPath, inputPath, (p) => {
+      currentVideoProc = p
+    })
+
+    return { outputPath }
+  })
+
+  ipcMain.handle('compressAudio', async (event, args) => {
+    const { inputPath, outputFormat, audioBitrate } = (args || {}) as {
+      inputPath: string
+      outputFormat: 'mp3' | 'aac' | 'ogg'
+      audioBitrate?: string
+    }
+
+    const dir = path.dirname(inputPath)
+    const base = path.basename(inputPath, path.extname(inputPath))
+    const ext = outputFormat
+    const outputPath = path.join(dir, `${base}_compressed.${ext}`)
+
+    event.sender.send('compressAudio-status', { status: 'start' })
+
+    const ffArgs: string[] = ['-y', '-i', inputPath, '-vn', '-map_metadata', '-1']
+
+    if (audioBitrate) ffArgs.push('-b:a', audioBitrate)
+
+    if (ext === 'mp3') ffArgs.push('-c:a', 'libmp3lame')
+    if (ext === 'aac') ffArgs.push('-c:a', 'aac')
+    if (ext === 'ogg') ffArgs.push('-c:a', 'libopus')
+
+    ffArgs.push(outputPath)
+
+    await runFfmpeg(event, 'compressAudio-status', ffArgs, outputPath, inputPath, (p) => {
+      currentAudioProc = p
+    })
+
+    return { outputPath }
+  })
+
   ipcMain.handle('m3u8-start', async (event, args) => {
     const {
       taskId,

@@ -4,6 +4,10 @@ import FileTransformPage from '@/views/fileTransform'
 import VideoPage from '@/views/fileTransform/video/page'
 import ImagePage from '@/views/fileTransform/image/page'
 import AudioPage from '@/views/fileTransform/audio/page'
+import FileCompressPage from '@/views/fileCompress'
+import CompressImagePage from '@/views/fileCompress/image/page'
+import CompressVideoPage from '@/views/fileCompress/video/page'
+import CompressAudioPage from '@/views/fileCompress/audio/page'
 import M3u8 from '@/views/m3u8'
 
 export const router = createHashRouter([
@@ -26,6 +30,24 @@ export const router = createHashRouter([
       {
         path: 'audio',
         element: <AudioPage />
+      }
+    ]
+  },
+  {
+    path: '/fileCompress',
+    element: <FileCompressPage />,
+    children: [
+      {
+        index: true,
+        element: <CompressImagePage />
+      },
+      {
+        path: 'video',
+        element: <CompressVideoPage />
+      },
+      {
+        path: 'audio',
+        element: <CompressAudioPage />
       }
     ]
   },
