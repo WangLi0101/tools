@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { FileCog, PlayCircle, FileSliders, FileDown } from 'lucide-react'
+import { FileCog, PlayCircle, FileSliders, FileDown, Video } from 'lucide-react'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { cn } from '@/lib/utils'
 import { motion } from 'motion/react'
@@ -50,6 +50,13 @@ const HomePage = (): React.JSX.Element => {
       Icon: FileDown,
       url: '/pdf',
       theme: 'blue'
+    },
+    {
+      title: '视频合并',
+      description: '支持合并多个视频文件',
+      Icon: Video,
+      url: '/videoMerge',
+      theme: 'violet'
     }
   ]
   const navigate = useNavigate()

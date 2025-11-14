@@ -10,6 +10,7 @@ import CompressVideoPage from '@/views/fileCompress/video/page'
 import CompressAudioPage from '@/views/fileCompress/audio/page'
 import M3u8 from '@/views/m3u8'
 import Pdf from '@/views/pdf'
+import VideoMergePage from '@/views/videoMerge/page'
 
 export const router = createHashRouter([
   {
@@ -59,5 +60,9 @@ export const router = createHashRouter([
   {
     path: '/pdf',
     element: <Pdf />
+  },
+  {
+    path: '/videoMerge',
+    element: <VideoMergePage />
   }
 ])

@@ -11,6 +11,21 @@ let currentAudioProc: any
 const m3u8Procs = new Map<string, any>()
 const m3u8States = new Map<string, 'running' | 'paused' | 'stopped'>()
 
+const getBin = (name: 'ffmpeg' | 'ffprobe'): string => {
+  if (process.platform === 'darwin') return name
+  const ext = process.platform === 'win32' ? '.exe' : ''
+  const filename = name + ext
+  const byRes = path.join(process.resourcesPath, filename)
+  if (fs.existsSync(byRes)) return byRes
+  const dev = path.join(__dirname, '../../../resources', filename)
+  if (fs.existsSync(dev)) return dev
+  return name
+}
+
+const FFMPEG_CMD = getBin('ffmpeg')
+const FFPROBE_CMD = getBin('ffprobe')
+let currentMergeProc: any
+
 const hmsToSeconds = (h: number, m: number, s: number): number => h * 3600 + m * 60 + s
 
 const parseTimeFromLine = (line: string): number | undefined => {
@@ -30,7 +45,7 @@ const parseTimeFromLine = (line: string): number | undefined => {
  */
 const probeDurationSeconds = async (input: string): Promise<number> => {
   return new Promise((resolve, reject) => {
-    const p = spawn('ffprobe', [
+    const p = spawn(FFPROBE_CMD, [
       '-v',
       'error',
       '-show_entries',
@@ -123,11 +138,17 @@ const runFfmpeg = async (
   args: string[],
   outputPath: string,
   inputPath?: string,
-  onSpawn?: (p: any) => void
+  onSpawn?: (p: any) => void,
+  totalDurationSec?: number
 ): Promise<void> => {
-  const durationSec = inputPath ? await probeDurationSeconds(inputPath) : undefined
+  const durationSec =
+    typeof totalDurationSec === 'number'
+      ? totalDurationSec
+      : inputPath
+        ? await probeDurationSeconds(inputPath)
+        : undefined
   return new Promise<void>((resolve, reject) => {
-    const proc = spawn('ffmpeg', args)
+    const proc = spawn(FFMPEG_CMD, args)
     if (onSpawn) onSpawn(proc)
     proc.stderr.on('data', (data) => {
       const line = String(data)
@@ -137,7 +158,9 @@ const runFfmpeg = async (
         const pct = Math.min(99, (t / durationSec) * 100)
         progress = Number(pct.toFixed(1))
       }
-      event.sender.send(channel, { status: 'progress', message: line, progress })
+      const payload: any = { status: 'progress', message: line }
+      if (typeof progress === 'number') payload.progress = progress
+      event.sender.send(channel, payload)
     })
     proc.on('error', (err) => {
       event.sender.send(channel, { status: 'error', message: String(err) })
@@ -490,7 +513,7 @@ export const registerFfmpegIPC = (): void => {
       console.log('Could not determine duration:', error)
     }
 
-    const proc = spawn('ffmpeg', [...ffArgs, outputPath])
+    const proc = spawn(FFMPEG_CMD, [...ffArgs, outputPath])
     m3u8Procs.set(taskId, proc)
     m3u8States.set(taskId, 'running')
 
@@ -619,6 +642,286 @@ export const registerFfmpegIPC = (): void => {
         currentAudioProc.kill('SIGINT')
       } finally {
         currentAudioProc = null
+      }
+    }
+  })
+
+  ipcMain.handle('videoMerge-start', async (event, args) => {
+    const { inputDir, outputDir } = (args || {}) as { inputDir: string; outputDir: string }
+    const channel = 'videoMerge-status'
+    const videoExts = [
+      '.mp4',
+      '.m4v',
+      '.mov',
+      '.avi',
+      '.mkv',
+      '.webm',
+      '.ts',
+      '.mts',
+      '.m2ts',
+      '.flv',
+      '.wmv'
+    ]
+
+    const isVideoFile = (p: string): boolean => videoExts.includes(path.extname(p).toLowerCase())
+
+    const scanRecursive = async (dir: string): Promise<string[]> => {
+      const res: string[] = []
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+      for (const e of entries) {
+        const fp = path.join(dir, e.name)
+        if (e.isDirectory()) {
+          res.push(...(await scanRecursive(fp)))
+        } else if (e.isFile() && isVideoFile(fp)) {
+          res.push(fp)
+        }
+      }
+      return res
+    }
+
+    const getCreationTime = async (file: string): Promise<number> => {
+      try {
+        const p = spawn(FFPROBE_CMD, [
+          '-v',
+          'error',
+          '-show_entries',
+          'format_tags=creation_time:stream_tags=creation_time',
+          '-of',
+          'default=noprint_wrappers=1',
+          file
+        ])
+        let out = ''
+        await new Promise<void>((resolve) => {
+          p.stdout.on('data', (d) => (out += String(d)))
+          p.on('close', () => resolve())
+        })
+        const m = out.match(/creation_time=(.*)/)
+        if (m) {
+          const s = m[1].trim()
+          const t = Date.parse(s)
+          if (Number.isFinite(t)) return t
+        }
+      } catch {}
+      try {
+        const st = await fs.promises.stat(file)
+        return st.birthtimeMs || st.ctimeMs || Date.now()
+      } catch {
+        return Date.now()
+      }
+    }
+
+    const getVideoProps = async (
+      file: string
+    ): Promise<{ vcodec?: string; acodec?: string; w?: number; h?: number; fps?: number }> => {
+      const res: { vcodec?: string; acodec?: string; w?: number; h?: number; fps?: number } = {}
+      try {
+        const pv = spawn(FFPROBE_CMD, [
+          '-v',
+          'error',
+          '-select_streams',
+          'v:0',
+          '-show_entries',
+          'stream=codec_name,width,height,r_frame_rate',
+          '-of',
+          'csv=s=,:p=0',
+          file
+        ])
+        let ov = ''
+        await new Promise<void>((resolve) => {
+          pv.stdout.on('data', (d) => (ov += String(d)))
+          pv.on('close', () => resolve())
+        })
+        const parts = ov.trim().split(',')
+        if (parts.length >= 4) {
+          res.vcodec = parts[0]
+          res.w = Number(parts[1])
+          res.h = Number(parts[2])
+          const fr = parts[3]
+          const [a, b] = fr.split('/').map((x) => Number(x))
+          if (Number.isFinite(a) && Number.isFinite(b) && b) res.fps = a / b
+        }
+      } catch {}
+      try {
+        const pa = spawn(FFPROBE_CMD, [
+          '-v',
+          'error',
+          '-select_streams',
+          'a:0',
+          '-show_entries',
+          'stream=codec_name',
+          '-of',
+          'csv=s=,:p=0',
+          file
+        ])
+        let oa = ''
+        await new Promise<void>((resolve) => {
+          pa.stdout.on('data', (d) => (oa += String(d)))
+          pa.on('close', () => resolve())
+        })
+        res.acodec = oa.trim() || undefined
+      } catch {}
+      return res
+    }
+
+    const fmtNow = (): string => {
+      const d = new Date()
+      const pad = (n: number) => String(n).padStart(2, '0')
+      return (
+        d.getFullYear().toString() +
+        pad(d.getMonth() + 1) +
+        pad(d.getDate()) +
+        '_' +
+        pad(d.getHours()) +
+        pad(d.getMinutes()) +
+        pad(d.getSeconds())
+      )
+    }
+
+    const channelStart = (total?: number): void => event.sender.send(channel, { status: 'start', total })
+    const channelError = (message: string): void =>
+      event.sender.send(channel, { status: 'error', message })
+
+    try {
+      if (!inputDir || !outputDir) {
+        channelError('参数不完整')
+        return
+      }
+      const inStat = await fs.promises.stat(inputDir).catch(() => null as any)
+      const outStat = await fs.promises.stat(outputDir).catch(() => null as any)
+      if (!inStat || !inStat.isDirectory()) {
+        channelError('输入文件夹不存在')
+        return
+      }
+      if (!outStat || !outStat.isDirectory()) {
+        await fs.promises.mkdir(outputDir, { recursive: true }).catch(() => null)
+      }
+
+      const files = await scanRecursive(inputDir)
+      if (files.length === 0) {
+        channelError('未找到视频文件')
+        return
+      }
+
+      const metas: Array<{
+        file: string
+        ctime: number
+        dur: number
+        props: { vcodec?: string; acodec?: string; w?: number; h?: number; fps?: number }
+        size: number
+      }> = []
+
+      for (const f of files) {
+        try {
+          const [ctime, dur, props, st] = await Promise.all([
+            getCreationTime(f),
+            probeDurationSeconds(f),
+            getVideoProps(f),
+            fs.promises.stat(f)
+          ])
+          if (!Number.isFinite(dur) || dur <= 0) continue
+          metas.push({ file: f, ctime, dur, props, size: st.size })
+        } catch {}
+      }
+
+      if (metas.length === 0) {
+        channelError('没有有效的视频文件')
+        return
+      }
+
+      channelStart(metas.length)
+
+      metas.sort((a, b) => a.ctime - b.ctime)
+
+      const totalDuration = metas.reduce((s, x) => s + (Number(x.dur) || 0), 0)
+      const w = metas.map((m) => m.props.w || 0)
+      const h = metas.map((m) => m.props.h || 0)
+      const fps = metas.map((m) => m.props.fps || 0)
+
+      const ts = fmtNow()
+      const outPath = path.join(outputDir, `merged_${ts}.mp4`)
+      const logPath = path.join(outputDir, `merged_${ts}.log`)
+      const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+      logStream.write(`输入文件夹: ${inputDir}\n`)
+      logStream.write(`输出文件: ${outPath}\n`)
+      logStream.write(`共 ${metas.length} 个文件\n`)
+      for (const m of metas) {
+        logStream.write(
+          `${m.file} | dur=${m.dur.toFixed(3)} | ` +
+            `v=${m.props.vcodec || '-'} ${m.props.w || 0}x${m.props.h || 0} ${
+              m.props.fps || 0
+            }fps | a=${m.props.acodec || '-'} | ctime=${new Date(m.ctime).toISOString()}\n`
+        )
+      }
+
+      {
+        const args: string[] = ['-y']
+        const n = metas.length
+        const audioIndex: number[] = []
+        let extraInputs = 0
+        for (let i = 0; i < n; i++) {
+          const m = metas[i]
+          args.push('-i', m.file)
+          const hasAudio = !!m.props.acodec
+          if (hasAudio) {
+            audioIndex.push(i)
+          } else {
+            args.push('-f', 'lavfi', '-t', m.dur.toFixed(3), '-i', 'anullsrc=r=48000:cl=stereo')
+            audioIndex.push(n + extraInputs)
+            extraInputs++
+          }
+        }
+
+        const targetW = Math.max(...w.filter((x) => Number.isFinite(x))) || metas[0].props.w || 1280
+        const targetH = Math.max(...h.filter((x) => Number.isFinite(x))) || metas[0].props.h || 720
+        const targetFps = Math.round(fps.find((x) => Number.isFinite(x) && x > 0) || 30)
+
+        const chains: string[] = []
+        for (let i = 0; i < n; i++) {
+          chains.push(
+            `[${i}:v:0]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,` +
+              `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${targetFps},setpts=PTS-STARTPTS,format=yuv420p[v${i}]`
+          )
+          chains.push(
+            `[${audioIndex[i]}:a:0]aformat=channel_layouts=stereo:sample_rates=48000,asetpts=PTS-STARTPTS[a${i}]`
+          )
+        }
+        const concatInputs = Array.from({ length: n })
+          .map((_, i) => `[v${i}][a${i}]`)
+          .join('')
+        const filter = `${chains.join(';')};${concatInputs}concat=n=${n}:v=1:a=1[v][a]`
+
+        args.push('-filter_complex', filter, '-map', '[v]', '-map', '[a]')
+        args.push('-c:v', 'libx264', '-c:a', 'aac', '-movflags', '+faststart')
+        await runFfmpeg(
+          event,
+          channel,
+          [...args, outPath],
+          outPath,
+          undefined,
+          (p) => {
+            currentMergeProc = p
+            p.stderr.on('data', (d: any) => {
+              logStream.write(String(d))
+            })
+          },
+          totalDuration
+        )
+      }
+
+      logStream.end()
+      event.sender.send(channel, { status: 'done', outputPath: outPath })
+    } catch (e) {
+      const msg = String(e || '未知错误')
+      event.sender.send('videoMerge-status', { status: 'error', message: msg })
+    }
+  })
+
+  ipcMain.handle('videoMerge-cancel', async () => {
+    if (currentMergeProc) {
+      try {
+        currentMergeProc.kill('SIGINT')
+      } finally {
+        currentMergeProc = null
       }
     }
   })

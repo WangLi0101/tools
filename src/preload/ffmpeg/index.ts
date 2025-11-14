@@ -160,6 +160,10 @@ export interface FfmpegApi {
   startM3u8: (options: M3u8TaskOptions) => Promise<void>
   cancelM3u8: (taskId: string) => Promise<void>
   onM3u8Status: (listener: (payload: M3u8Status) => void) => () => void
+
+  mergeVideos: (options: { inputDir: string; outputDir: string }) => Promise<void>
+  cancelVideoMerge: () => Promise<void>
+  onVideoMergeStatus: (listener: (payload: { status: 'start' | 'progress' | 'done' | 'error' | 'canceled'; progress?: number; message?: string; outputPath?: string; total?: number }) => void) => () => void
 }
 
 export const ffmpegApi: FfmpegApi = {
@@ -237,5 +241,13 @@ export const ffmpegApi: FfmpegApi = {
     const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
     ipcRenderer.on('m3u8-status', handler)
     return () => ipcRenderer.removeListener('m3u8-status', handler)
+  },
+
+  mergeVideos: (options) => ipcRenderer.invoke('videoMerge-start', options),
+  cancelVideoMerge: () => ipcRenderer.invoke('videoMerge-cancel'),
+  onVideoMergeStatus: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
+    ipcRenderer.on('videoMerge-status', handler)
+    return () => ipcRenderer.removeListener('videoMerge-status', handler)
   }
 }
