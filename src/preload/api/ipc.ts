@@ -62,7 +62,13 @@ export const registerIpc = () => {
     send({ status: 'update-not-available' })
   })
   autoUpdater.on('download-progress', (p) => {
-    send({ status: 'download-progress', percent: p.percent, transferred: p.transferred, total: p.total, bytesPerSecond: p.bytesPerSecond })
+    send({
+      status: 'download-progress',
+      percent: p.percent,
+      transferred: p.transferred,
+      total: p.total,
+      bytesPerSecond: p.bytesPerSecond
+    })
   })
   autoUpdater.on('update-downloaded', (info) => {
     send({ status: 'update-downloaded', info })

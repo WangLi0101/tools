@@ -47,6 +47,6 @@ appImage:
 npmRebuild: false
 publish:
   provider: generic
-  url: https://tools-electron.oss-cn-beijing.aliyuncs.com/tols
+  url: https://tools-electron.oss-cn-beijing.aliyuncs.com/tools
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/

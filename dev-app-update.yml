@@ -1,3 +1,3 @@
 provider: generic
-url: https://tools-electron.oss-cn-beijing.aliyuncs.com/tols
+url: https://tools-electron.oss-cn-beijing.aliyuncs.com/tools
 updaterCacheDirName: electron_ffmpeg-updater

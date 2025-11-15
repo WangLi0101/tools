@@ -11,6 +11,8 @@ import CompressAudioPage from '@/views/fileCompress/audio/page'
 import M3u8 from '@/views/m3u8'
 import Pdf from '@/views/pdf'
 import VideoMergePage from '@/views/videoMerge/page'
+import Merge from '@/views/videoMerge/merge/page'
+import GroupPage from '@/views/videoMerge/group/page'
 
 export const router = createHashRouter([
   {
@@ -63,6 +65,16 @@ export const router = createHashRouter([
   },
   {
     path: '/videoMerge',
-    element: <VideoMergePage />
+    element: <VideoMergePage />,
+    children: [
+      {
+        index: true,
+        element: <Merge />
+      },
+      {
+        path: 'group',
+        element: <GroupPage />
+      }
+    ]
   }
 ])

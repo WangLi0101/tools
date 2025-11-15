@@ -29,8 +29,7 @@ const Tool = (): React.JSX.Element => {
             onClick: () => window.api.downloadUpdate()
           }
         })
-      if (p.status === 'download-progress')
-        toast.info(`下载进度 ${Math.round(p.percent || 0)}%`)
+      if (p.status === 'download-progress') toast.info(`下载进度 ${Math.round(p.percent || 0)}%`)
       if (p.status === 'update-downloaded')
         toast.success('更新已下载', {
           action: { label: '重启安装', onClick: () => window.api.quitAndInstall() }

@@ -182,6 +182,29 @@ export interface FfmpegApi {
     }) => void
   ) => () => void
   // batches/batchIndex/batchCount are emitted for multi-step strategies
+
+  scanVideoFiles: (options: { inputDir: string; formats: string[] }) => Promise<{ files: string[] }>
+  mergeVideosByList: (options: {
+    taskId: string
+    files: string[]
+    outputDir: string
+    outputName?: string
+    noProgress?: boolean
+  }) => Promise<void>
+  cancelVideoGroup: (taskId?: string) => Promise<void>
+  onVideoGroupStatus: (
+    listener: (payload: {
+      taskId: string
+      status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
+      progress?: number
+      message?: string
+      outputPath?: string
+      total?: number
+      phase?: 'scan' | 'merge'
+      validation?: { expected?: number; actual?: number; diff?: number }
+      noProgress?: boolean
+    }) => void
+  ) => () => void
 }
 
 export const ffmpegApi: FfmpegApi = {
@@ -267,5 +290,14 @@ export const ffmpegApi: FfmpegApi = {
     const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
     ipcRenderer.on('videoMerge-status', handler)
     return () => ipcRenderer.removeListener('videoMerge-status', handler)
+  },
+
+  scanVideoFiles: (options) => ipcRenderer.invoke('videoGroup-scan', options),
+  mergeVideosByList: (options) => ipcRenderer.invoke('videoGroup-mergeList', options),
+  cancelVideoGroup: (taskId) => ipcRenderer.invoke('videoGroup-cancel', taskId),
+  onVideoGroupStatus: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
+    ipcRenderer.on('videoGroup-status', handler)
+    return () => ipcRenderer.removeListener('videoGroup-status', handler)
   }
 }

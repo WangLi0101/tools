@@ -809,8 +809,16 @@ export const registerFfmpegIPC = (): void => {
           phase: 'merge',
           noProgress: true
         })
-        event.sender.send(channel, { status: 'progress', message: `输出文件：${outPath}`, noProgress: true })
-        event.sender.send(channel, { status: 'progress', message: `合并文件数：${files.length}`, noProgress: true })
+        event.sender.send(channel, {
+          status: 'progress',
+          message: `输出文件：${outPath}`,
+          noProgress: true
+        })
+        event.sender.send(channel, {
+          status: 'progress',
+          message: `合并文件数：${files.length}`,
+          noProgress: true
+        })
 
         const listPath = path.join(outputDir, 'list.txt')
         const listContent = files.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join('\n')
@@ -1063,6 +1071,205 @@ export const registerFfmpegIPC = (): void => {
     for (const bw of BrowserWindow.getAllWindows()) {
       try {
         bw.webContents.send('videoMerge-status', { status: 'canceled' })
+      } catch {}
+    }
+  })
+
+  ipcMain.handle('videoGroup-scan', async (_event, args) => {
+    const { inputDir, formats } = (args || {}) as { inputDir: string; formats: string[] }
+    const exts = Array.from(
+      new Set(
+        (formats || [])
+          .map((s) =>
+            String(s || '')
+              .trim()
+              .toLowerCase()
+          )
+          .filter(Boolean)
+          .map((s) => (s.startsWith('.') ? s : `.${s}`))
+      )
+    )
+    const isVideoFile = (p: string): boolean => exts.includes(path.extname(p).toLowerCase())
+    const scanRecursive = async (dir: string): Promise<string[]> => {
+      const res: string[] = []
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => [])
+      for (const e of entries) {
+        const fp = path.join(dir, e.name)
+        if (e.isDirectory()) res.push(...(await scanRecursive(fp)))
+        else if (e.isFile() && isVideoFile(fp)) res.push(fp)
+      }
+      return res
+    }
+    const stat = await fs.promises.stat(inputDir).catch(() => null as any)
+    if (!stat || !stat.isDirectory()) return { files: [] }
+    const files = await scanRecursive(inputDir)
+    return { files }
+  })
+
+  ipcMain.handle('videoGroup-mergeList', async (event, args) => {
+    const { taskId, files, outputDir, outputName, noProgress } = (args || {}) as {
+      taskId: string
+      files: string[]
+      outputDir: string
+      outputName?: string
+      noProgress?: boolean
+    }
+    const channel = 'videoGroup-status'
+
+    const channelSend = (payload: any): void => {
+      event.sender.send(channel, { taskId, ...payload })
+    }
+
+    try {
+      mergeCanceled = false
+      if (!files || !files.length || !outputDir) {
+        channelSend({ status: 'error', message: '参数不完整' })
+        return
+      }
+      const outStat = await fs.promises.stat(outputDir).catch(() => null as any)
+      if (!outStat || !outStat.isDirectory()) {
+        await fs.promises.mkdir(outputDir, { recursive: true }).catch(() => null)
+      }
+
+      const ts = (() => {
+        const d = new Date()
+        const pad = (n: number) => String(n).padStart(2, '0')
+        return (
+          d.getFullYear().toString() +
+          pad(d.getMonth() + 1) +
+          pad(d.getDate()) +
+          '_' +
+          pad(d.getHours()) +
+          pad(d.getMinutes()) +
+          pad(d.getSeconds())
+        )
+      })()
+
+      const outBase = outputName && outputName.trim() ? outputName.trim() : `merged_${ts}`
+      const outPath = path.join(outputDir, `${outBase}.mkv`)
+      const logPath = path.join(outputDir, `${outBase}.log`)
+      const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+      logStream.write(`任务ID: ${taskId}\n`)
+      logStream.write(`输出文件: ${outPath}\n`)
+      logStream.write(`合并文件数: ${files.length}\n`)
+      for (const f of files) logStream.write(`${f}\n`)
+
+      channelSend({
+        status: 'start',
+        total: files.length,
+        phase: 'merge',
+        noProgress: !!noProgress
+      })
+
+      const listPath = path.join(outputDir, `${outBase}_list.txt`)
+      const listContent = files.map((f) => `file '${String(f).replace(/'/g, "'\\''")}'`).join('\n')
+      await fs.promises.unlink(listPath).catch(() => null)
+      await fs.promises.writeFile(listPath, listContent).catch(() => null)
+      mergeTmpArtifacts.push(listPath)
+
+      let totalDuration = 0
+      if (!noProgress) {
+        const cores = os.cpus()?.length || 4
+        const CONC = Math.min(32, Math.max(8, cores * 2))
+        let idx = 0
+        const worker = async (): Promise<void> => {
+          while (idx < files.length && !mergeCanceled) {
+            const i = idx++
+            try {
+              const dur = await probeDurationSeconds(files[i]).catch(() => 0)
+              if (Number.isFinite(dur) && dur > 0) totalDuration += dur
+            } catch {}
+          }
+        }
+        await Promise.all(Array.from({ length: CONC }).map(() => worker()))
+      }
+
+      const finalArgs: string[] = [
+        '-y',
+        '-f',
+        'concat',
+        '-safe',
+        '0',
+        '-i',
+        listPath,
+        '-c',
+        'copy',
+        '-movflags',
+        '+faststart',
+        outPath
+      ]
+
+      const onSpawn = (p: any): void => {
+        currentMergeProc = p
+        p.stderr.on('data', (d: any) => {
+          logStream.write(String(d))
+          channelSend({ status: 'progress', message: String(d) })
+        })
+      }
+
+      try {
+        await runFfmpeg(event, channel, finalArgs, outPath, undefined, onSpawn, totalDuration, 0)
+      } catch (e) {
+        await fs.promises.unlink(listPath).catch(() => null)
+        logStream.end()
+        if (mergeCanceled) {
+          channelSend({ status: 'canceled' })
+          return
+        }
+        channelSend({ status: 'error', message: String(e || '未知错误') })
+        return
+      }
+
+      await fs.promises.unlink(listPath).catch(() => null)
+      logStream.end()
+
+      try {
+        const actualDur = await probeDurationSeconds(outPath).catch(() => undefined as any)
+        const validation =
+          typeof actualDur === 'number' && Number.isFinite(actualDur)
+            ? {
+                expected: totalDuration || undefined,
+                actual: actualDur,
+                diff: totalDuration ? Number((actualDur - totalDuration).toFixed(2)) : undefined
+              }
+            : { expected: totalDuration || undefined }
+        channelSend({ status: 'done', outputPath: outPath, validation })
+      } catch {
+        channelSend({ status: 'done', outputPath: outPath })
+      }
+    } catch (e) {
+      channelSend({ status: 'error', message: String(e || '未知错误') })
+    }
+  })
+
+  ipcMain.handle('videoGroup-cancel', async (_event, taskId?: string) => {
+    mergeCanceled = true
+    if (currentMergeProc) {
+      try {
+        currentMergeProc.kill('SIGINT')
+      } finally {
+        currentMergeProc = null
+      }
+    }
+    for (const p of Array.from(mergeScanProcs)) {
+      try {
+        p.kill('SIGINT')
+      } catch {}
+      mergeScanProcs.delete(p)
+    }
+    for (const fp of mergeTmpArtifacts.splice(0)) {
+      try {
+        await fs.promises.unlink(fp)
+      } catch {}
+    }
+    for (const dir of mergeTmpDirs.splice(0)) {
+      try {
+        await fs.promises.rmdir(dir)
+      } catch {}
+    }
+    for (const bw of BrowserWindow.getAllWindows()) {
+      try {
+        bw.webContents.send('videoGroup-status', { taskId, status: 'canceled' })
       } catch {}
     }
   })
