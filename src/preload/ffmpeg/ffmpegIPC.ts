@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
@@ -10,20 +10,19 @@ let currentVideoProc: any
 let currentAudioProc: any
 const m3u8Procs = new Map<string, any>()
 const m3u8States = new Map<string, 'running' | 'paused' | 'stopped'>()
-
+const IS_DEV = !app.isPackaged
 const getBin = (name: 'ffmpeg' | 'ffprobe'): string => {
   if (process.platform === 'darwin') return name
-  const ext = process.platform === 'win32' ? '.exe' : ''
-  const filename = name + ext
-  const byRes = path.join(process.resourcesPath, filename)
-  if (fs.existsSync(byRes)) return byRes
-  const dev = path.join(__dirname, '../../../resources', filename)
-  if (fs.existsSync(dev)) return dev
-  return name
+  if (IS_DEV) {
+    return path.join(app.getAppPath(), 'resources', 'bin', `${name}`)
+  }
+  return path.join(process.resourcesPath, 'bin', `${name}`)
 }
 
 const FFMPEG_CMD = getBin('ffmpeg')
 const FFPROBE_CMD = getBin('ffprobe')
+console.log(FFPROBE_CMD)
+
 let currentMergeProc: any
 
 const hmsToSeconds = (h: number, m: number, s: number): number => h * 3600 + m * 60 + s
@@ -647,10 +646,11 @@ export const registerFfmpegIPC = (): void => {
   })
 
   ipcMain.handle('videoMerge-start', async (event, args) => {
-    const { inputDir, outputDir, formats } = (args || {}) as {
+    const { inputDir, outputDir, formats, codec } = (args || {}) as {
       inputDir: string
       outputDir: string
       formats?: string[]
+      codec?: 'h264' | 'hevc'
     }
     const channel = 'videoMerge-status'
     const defaultExts = [
@@ -666,16 +666,21 @@ export const registerFfmpegIPC = (): void => {
       '.flv',
       '.wmv'
     ]
-    const exts = (Array.isArray(formats) && formats.length
-      ? Array.from(
-          new Set(
-            formats
-              .map((s) => String(s || '').trim().toLowerCase())
-              .filter(Boolean)
-              .map((s) => (s.startsWith('.') ? s : `.${s}`))
+    const exts =
+      Array.isArray(formats) && formats.length
+        ? Array.from(
+            new Set(
+              formats
+                .map((s) =>
+                  String(s || '')
+                    .trim()
+                    .toLowerCase()
+                )
+                .filter(Boolean)
+                .map((s) => (s.startsWith('.') ? s : `.${s}`))
+            )
           )
-        )
-      : defaultExts)
+        : defaultExts
 
     const isVideoFile = (p: string): boolean => exts.includes(path.extname(p).toLowerCase())
 
@@ -791,7 +796,8 @@ export const registerFfmpegIPC = (): void => {
       )
     }
 
-    const channelStart = (total?: number): void => event.sender.send(channel, { status: 'start', total })
+    const channelStart = (total?: number): void =>
+      event.sender.send(channel, { status: 'start', total })
     const channelError = (message: string): void =>
       event.sender.send(channel, { status: 'error', message })
 
@@ -905,7 +911,13 @@ export const registerFfmpegIPC = (): void => {
         const filter = `${chains.join(';')};${concatInputs}concat=n=${n}:v=1:a=1[v][a]`
 
         args.push('-filter_complex', filter, '-map', '[v]', '-map', '[a]')
-        args.push('-c:v', 'libx264', '-c:a', 'aac', '-movflags', '+faststart')
+        if ((codec || 'h264') === 'hevc') {
+          args.push('-c:v', 'libx265')
+          args.push('-tag:v', 'hvc1')
+        } else {
+          args.push('-c:v', 'libx264')
+        }
+        args.push('-c:a', 'aac', '-movflags', '+faststart')
         await runFfmpeg(
           event,
           channel,

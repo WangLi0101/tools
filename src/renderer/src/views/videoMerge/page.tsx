@@ -20,6 +20,7 @@ const VideoMergePage = () => {
   const [outputPath, setOutputPath] = useState<string>('')
   const [total, setTotal] = useState<number>(0)
   const [selectedFormats, setSelectedFormats] = useState<string[]>(['mp4'])
+  const [codec, setCodec] = useState<'h264' | 'hevc'>('h264')
   const unsubRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -92,7 +93,7 @@ const VideoMergePage = () => {
     }
     setStatus('准备合并')
     setOutputPath('')
-    await window.ffmpeg.mergeVideos({ inputDir, outputDir, formats: selectedFormats })
+    await window.ffmpeg.mergeVideos({ inputDir, outputDir, formats: selectedFormats, codec })
   }
 
   const onCancel = async (): Promise<void> => {
@@ -141,6 +142,29 @@ const VideoMergePage = () => {
               </div>
               <div className="text-xs text-muted-foreground">
                 可用空间：{fmtBytes(disk.free)} / 总空间：{fmtBytes(disk.total)}
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">编码</span>
+                <div className="flex items-center gap-3 text-xs">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="codec"
+                      checked={codec === 'h264'}
+                      onChange={() => setCodec('h264')}
+                    />
+                    <span>H.264</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="codec"
+                      checked={codec === 'hevc'}
+                      onChange={() => setCodec('hevc')}
+                    />
+                    <span>HEVC</span>
+                  </label>
+                </div>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground mb-2">视频检索格式</p>
