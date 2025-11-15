@@ -20,6 +20,31 @@ const HomePage = (): React.JSX.Element => {
       card: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 dark:border-emerald-800',
       iconWrap: 'bg-emerald-100 dark:bg-emerald-900/40',
       icon: 'text-emerald-600 dark:text-emerald-400'
+    },
+    indigo: {
+      card: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/30 dark:border-indigo-800',
+      iconWrap: 'bg-indigo-100 dark:bg-indigo-900/40',
+      icon: 'text-indigo-600 dark:text-indigo-400'
+    },
+    rose: {
+      card: 'bg-rose-50 hover:bg-rose-100 border-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-900/30 dark:border-rose-800',
+      iconWrap: 'bg-rose-100 dark:bg-rose-900/40',
+      icon: 'text-rose-600 dark:text-rose-400'
+    },
+    amber: {
+      card: 'bg-amber-50 hover:bg-amber-100 border-amber-200 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 dark:border-amber-800',
+      iconWrap: 'bg-amber-100 dark:bg-amber-900/40',
+      icon: 'text-amber-600 dark:text-amber-400'
+    },
+    cyan: {
+      card: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/30 dark:border-cyan-800',
+      iconWrap: 'bg-cyan-100 dark:bg-cyan-900/40',
+      icon: 'text-cyan-600 dark:text-cyan-400'
+    },
+    teal: {
+      card: 'bg-teal-50 hover:bg-teal-100 border-teal-200 dark:bg-teal-900/20 dark:hover:bg-teal-900/30 dark:border-teal-800',
+      iconWrap: 'bg-teal-100 dark:bg-teal-900/40',
+      icon: 'text-teal-600 dark:text-teal-400'
     }
   } as const
   const items = [
@@ -28,35 +53,35 @@ const HomePage = (): React.JSX.Element => {
       description: '轻松转换各种文件格式，支持图像、视频、音频',
       Icon: FileSliders,
       url: '/fileTransForm',
-      theme: 'blue'
+      theme: 'indigo'
     },
     {
       title: '文件压缩',
       description: '轻松压缩各种文件格式，支持图像、视频、音频',
       Icon: FileCog,
       url: '/fileCompress',
-      theme: 'violet'
+      theme: 'rose'
     },
     {
       title: 'm3u8下载',
       description: '支持m3u8视频下载',
       Icon: PlayCircle,
       url: '/m3u8',
-      theme: 'emerald'
+      theme: 'teal'
     },
     {
       title: 'PDF生成',
       description: '支持生成PDF文件',
       Icon: FileDown,
       url: '/pdf',
-      theme: 'blue'
+      theme: 'amber'
     },
     {
       title: '视频合并',
       description: '支持合并多个视频文件',
       Icon: Video,
       url: '/videoMerge',
-      theme: 'violet'
+      theme: 'cyan'
     }
   ]
   const navigate = useNavigate()

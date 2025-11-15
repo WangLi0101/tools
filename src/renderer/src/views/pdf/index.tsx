@@ -59,7 +59,7 @@ const Pdf = (): React.JSX.Element => {
     <div className="space-y-3 p-3">
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-          <FileDown className="size-6 text-blue-600 dark:text-blue-400" />
+          <FileDown className="size-6 text-amber-600 dark:text-amber-400" />
           PDF生成
         </h2>
         <GoHome />

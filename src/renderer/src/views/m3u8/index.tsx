@@ -172,7 +172,7 @@ const M3u8 = (): React.JSX.Element => {
       <div className="mx-auto max-w-3xl px-3 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-            <PlayCircle className="size-6 text-emerald-600 dark:text-emerald-400" />
+            <PlayCircle className="size-6 text-teal-600 dark:text-teal-400" />
             m3u8下载
           </h2>
           <GoHome />

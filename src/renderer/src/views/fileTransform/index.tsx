@@ -1,6 +1,6 @@
 import GoHome from '@/components/common/goHome'
 import MyTabs from '@/components/common/myTabs'
-import { FileCog, Music2, Image, Video } from 'lucide-react'
+import { Music2, Image, Video, FileSliders } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
 import { motion } from 'motion/react'
 
@@ -32,7 +32,7 @@ const FileTransformPage = (): React.JSX.Element => {
       <div className="mx-auto max-w-3xl px-3 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-            <FileCog className="size-6 text-blue-600 dark:text-blue-400" />
+            <FileSliders className="size-6 text-indigo-600 dark:text-indigo-400" />
             文件转换
           </h2>
           <GoHome />

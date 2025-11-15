@@ -110,7 +110,7 @@ const VideoMergePage = () => {
       <div className="mx-auto max-w-3xl px-3 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-            <Video className="size-6 text-violet-600 dark:text-violet-400" />
+            <Video className="size-6 text-cyan-600 dark:text-cyan-400" />
             视频合并
           </h2>
           <GoHome />
