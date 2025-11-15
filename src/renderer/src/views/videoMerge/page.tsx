@@ -15,42 +15,101 @@ const VideoMergePage = () => {
   )
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
   const [progress, setProgress] = useState<number | undefined>(undefined)
+  const [scanProgress, setScanProgress] = useState<number | undefined>(undefined)
+  const [scanCount, setScanCount] = useState<number>(0)
+  const [scanTotal, setScanTotal] = useState<number>(0)
   const [running, setRunning] = useState<boolean>(false)
   const [status, setStatus] = useState<string>('')
   const [outputPath, setOutputPath] = useState<string>('')
   const [total, setTotal] = useState<number>(0)
-  const [selectedFormats, setSelectedFormats] = useState<string[]>(['mp4'])
-  const [codec, setCodec] = useState<'h264' | 'hevc'>('h264')
+  const [selectedFormats, setSelectedFormats] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('merge.formats')
+      if (saved) {
+        const arr = JSON.parse(saved)
+        if (Array.isArray(arr) && arr.length) return arr
+      }
+    } catch {}
+    return ['mp4']
+  })
+  const [noProgress, setNoProgress] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('merge.noProgress')
+      if (saved) return saved === '1'
+    } catch {}
+    return false
+  })
+  const [hideProgressRun, setHideProgressRun] = useState<boolean>(false)
+  const [infoLines, setInfoLines] = useState<string[]>([])
+
   const unsubRef = useRef<(() => void) | null>(null)
+  const hideRef = useRef<boolean>(false)
+  const logRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const unsubscribe = window.ffmpeg.onVideoMergeStatus((payload) => {
-      const { status: st, progress: p, message, outputPath: out } = payload
+      const { status: st, progress: p, message, outputPath: out, phase } = payload
       if (st === 'start') {
         setRunning(true)
         setStatus('开始合并')
-        setProgress(0)
+        const hp = payload.noProgress === true
+        setHideProgressRun(hp)
+        hideRef.current = hp
+        setProgress(hp ? undefined : 0)
+        setScanProgress(undefined)
+        setScanCount(0)
+        setScanTotal(0)
         setOutputPath('')
+        setInfoLines([])
         if (typeof payload.total === 'number') setTotal(payload.total)
       } else if (st === 'progress') {
-        if (typeof p === 'number') setProgress(p)
-        setStatus('合并中')
+        setRunning(true)
+        if (phase === 'scan') {
+          if (!hideRef.current && typeof p === 'number') setScanProgress(p)
+          if (typeof payload.scanCount === 'number') setScanCount(payload.scanCount)
+          if (typeof payload.scanTotal === 'number') setScanTotal(payload.scanTotal)
+          setStatus('扫描中')
+        } else {
+          if (!hideRef.current && typeof p === 'number') setProgress(p)
+          setStatus('合并中')
+          if (hideRef.current && typeof message === 'string') {
+            const parts = message
+              .split('\n')
+              .map((s) => s.trim())
+              .filter(Boolean)
+            if (parts.length) {
+              setInfoLines((prev) => {
+                const next = [...prev, ...parts]
+                return next.slice(Math.max(0, next.length - 20))
+              })
+            }
+          }
+        }
       } else if (st === 'done') {
         setRunning(false)
         setProgress(undefined)
+        setScanProgress(undefined)
         setStatus('合并完成')
         setOutputPath(out || '')
         setTotal((t) => t)
+        setHideProgressRun(false)
+        hideRef.current = false
         toast.success('合并完成')
       } else if (st === 'error') {
         setRunning(false)
         setProgress(undefined)
+        setScanProgress(undefined)
         setStatus(`错误：${message || ''}`)
+        setHideProgressRun(false)
+        hideRef.current = false
         toast.error(`合并失败：${message || ''}`)
       } else if (st === 'canceled') {
         setRunning(false)
         setProgress(undefined)
+        setScanProgress(undefined)
         setStatus('已取消')
+        setHideProgressRun(false)
+        hideRef.current = false
       }
     })
     unsubRef.current = unsubscribe
@@ -59,6 +118,19 @@ const VideoMergePage = () => {
       unsubRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    if (hideRef.current) {
+      const el = logRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    }
+  }, [infoLines])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('merge.formats', JSON.stringify(selectedFormats))
+    } catch {}
+  }, [selectedFormats])
 
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
   const canRun = useMemo(
@@ -91,9 +163,10 @@ const VideoMergePage = () => {
       toast.error('请选择输出文件夹')
       return
     }
+    setRunning(true)
     setStatus('准备合并')
     setOutputPath('')
-    await window.ffmpeg.mergeVideos({ inputDir, outputDir, formats: selectedFormats, codec })
+    await window.ffmpeg.mergeVideos({ inputDir, outputDir, formats: selectedFormats, noProgress })
   }
 
   const onCancel = async (): Promise<void> => {
@@ -143,29 +216,19 @@ const VideoMergePage = () => {
               <div className="text-xs text-muted-foreground">
                 可用空间：{fmtBytes(disk.free)} / 总空间：{fmtBytes(disk.total)}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">编码</span>
-                <div className="flex items-center gap-3 text-xs">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="codec"
-                      checked={codec === 'h264'}
-                      onChange={() => setCodec('h264')}
-                    />
-                    <span>H.264</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="codec"
-                      checked={codec === 'hevc'}
-                      onChange={() => setCodec('hevc')}
-                    />
-                    <span>HEVC</span>
-                  </label>
-                </div>
-              </div>
+              <label className="flex items-center gap-2 text-xs">
+                <Checkbox
+                  checked={noProgress}
+                  onCheckedChange={(checked) => {
+                    const v = checked === true
+                    setNoProgress(v)
+                    try {
+                      localStorage.setItem('merge.noProgress', v ? '1' : '0')
+                    } catch {}
+                  }}
+                />
+                <span>不显示进度（不扫描，更快）</span>
+              </label>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground mb-2">视频检索格式</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -213,12 +276,38 @@ const VideoMergePage = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{status || '等待中'}</span>
-                {typeof progress === 'number' && (
+                {!hideProgressRun && typeof progress === 'number' && (
                   <span className="text-xs text-muted-foreground">{progress.toFixed(1)}%</span>
                 )}
               </div>
+              {!hideProgressRun && typeof scanProgress === 'number' && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      扫描文件数：{scanCount}/{scanTotal}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {scanProgress.toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress value={scanProgress} />
+                </div>
+              )}
               <div className="text-xs text-muted-foreground">合并视频数：{total || 0}</div>
-              {typeof progress === 'number' && <Progress value={progress} />}
+              {!hideProgressRun && typeof progress === 'number' && <Progress value={progress} />}
+              {hideProgressRun && infoLines.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">合并信息</div>
+                  <div
+                    ref={logRef}
+                    className="h-40 overflow-y-auto rounded border p-2 text-[11px] text-muted-foreground break-all whitespace-pre-wrap leading-tight"
+                  >
+                    {infoLines.map((ln, i) => (
+                      <div key={`${i}-${ln.slice(0, 8)}`}>{ln}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {outputPath && (

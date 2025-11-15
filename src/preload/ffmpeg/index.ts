@@ -161,9 +161,27 @@ export interface FfmpegApi {
   cancelM3u8: (taskId: string) => Promise<void>
   onM3u8Status: (listener: (payload: M3u8Status) => void) => () => void
 
-  mergeVideos: (options: { inputDir: string; outputDir: string; formats?: string[]; codec?: 'h264' | 'hevc' }) => Promise<void>
+  mergeVideos: (options: {
+    inputDir: string
+    outputDir: string
+    formats?: string[]
+    noProgress?: boolean
+  }) => Promise<void>
   cancelVideoMerge: () => Promise<void>
-  onVideoMergeStatus: (listener: (payload: { status: 'start' | 'progress' | 'done' | 'error' | 'canceled'; progress?: number; message?: string; outputPath?: string; total?: number }) => void) => () => void
+  onVideoMergeStatus: (
+    listener: (payload: {
+      status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
+      progress?: number
+      message?: string
+      outputPath?: string
+      total?: number
+      phase?: 'scan' | 'merge'
+      scanCount?: number
+      scanTotal?: number
+      noProgress?: boolean
+    }) => void
+  ) => () => void
+  // batches/batchIndex/batchCount are emitted for multi-step strategies
 }
 
 export const ffmpegApi: FfmpegApi = {

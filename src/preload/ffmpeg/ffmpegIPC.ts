@@ -1,9 +1,10 @@
-import { app, ipcMain } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import http from 'http'
 import https from 'https'
+import os from 'os'
 
 let currentImageProc: any
 let currentVideoProc: any
@@ -24,6 +25,10 @@ const FFPROBE_CMD = getBin('ffprobe')
 console.log(FFPROBE_CMD)
 
 let currentMergeProc: any
+let mergeCanceled = false
+const mergeScanProcs = new Set<any>()
+const mergeTmpArtifacts: string[] = []
+const mergeTmpDirs: string[] = []
 
 const hmsToSeconds = (h: number, m: number, s: number): number => h * 3600 + m * 60 + s
 
@@ -50,7 +55,7 @@ const probeDurationSeconds = async (input: string): Promise<number> => {
       '-show_entries',
       'format=duration',
       '-of',
-      'default=noprint_wrappers=1:nokey=1',
+      'csv=p=0',
       input
     ])
     let out = ''
@@ -138,14 +143,18 @@ const runFfmpeg = async (
   outputPath: string,
   inputPath?: string,
   onSpawn?: (p: any) => void,
-  totalDurationSec?: number
+  totalDurationSec?: number,
+  progressBaseSec?: number,
+  emitDone?: boolean
 ): Promise<void> => {
+  const shouldEmitDone = emitDone !== false
   const durationSec =
     typeof totalDurationSec === 'number'
       ? totalDurationSec
       : inputPath
-        ? await probeDurationSeconds(inputPath)
+        ? await probeDurationSeconds(inputPath).catch(() => undefined)
         : undefined
+  const baseSec = Number(progressBaseSec || 0)
   return new Promise<void>((resolve, reject) => {
     const proc = spawn(FFMPEG_CMD, args)
     if (onSpawn) onSpawn(proc)
@@ -154,7 +163,7 @@ const runFfmpeg = async (
       let progress: number | undefined
       const t = parseTimeFromLine(line)
       if (durationSec && t && t >= 0) {
-        const pct = Math.min(99, (t / durationSec) * 100)
+        const pct = Math.min(99, ((baseSec + t) / durationSec) * 100)
         progress = Number(pct.toFixed(1))
       }
       const payload: any = { status: 'progress', message: line }
@@ -172,7 +181,7 @@ const runFfmpeg = async (
         return
       }
       if (code === 0 && fs.existsSync(outputPath)) {
-        event.sender.send(channel, { status: 'done', outputPath })
+        if (shouldEmitDone) event.sender.send(channel, { status: 'done', outputPath })
         resolve()
       } else {
         const msg = `ffmpeg exited with code ${code}`
@@ -646,44 +655,31 @@ export const registerFfmpegIPC = (): void => {
   })
 
   ipcMain.handle('videoMerge-start', async (event, args) => {
-    const { inputDir, outputDir, formats, codec } = (args || {}) as {
+    const { inputDir, outputDir, formats, noProgress } = (args || {}) as {
       inputDir: string
       outputDir: string
-      formats?: string[]
-      codec?: 'h264' | 'hevc'
+      formats: string[]
+      noProgress?: boolean
     }
     const channel = 'videoMerge-status'
-    const defaultExts = [
-      '.mp4',
-      '.m4v',
-      '.mov',
-      '.avi',
-      '.mkv',
-      '.webm',
-      '.ts',
-      '.mts',
-      '.m2ts',
-      '.flv',
-      '.wmv'
-    ]
-    const exts =
-      Array.isArray(formats) && formats.length
-        ? Array.from(
-            new Set(
-              formats
-                .map((s) =>
-                  String(s || '')
-                    .trim()
-                    .toLowerCase()
-                )
-                .filter(Boolean)
-                .map((s) => (s.startsWith('.') ? s : `.${s}`))
-            )
-          )
-        : defaultExts
 
+    const exts = Array.from(
+      new Set(
+        formats
+          .map((s) =>
+            String(s || '')
+              .trim()
+              .toLowerCase()
+          )
+          .filter(Boolean)
+          .map((s) => (s.startsWith('.') ? s : `.${s}`))
+      )
+    )
+
+    // 是否为视频文件
     const isVideoFile = (p: string): boolean => exts.includes(path.extname(p).toLowerCase())
 
+    // 扫描文件
     const scanRecursive = async (dir: string): Promise<string[]> => {
       const res: string[] = []
       const entries = await fs.promises.readdir(dir, { withFileTypes: true })
@@ -698,90 +694,48 @@ export const registerFfmpegIPC = (): void => {
       return res
     }
 
-    const getCreationTime = async (file: string): Promise<number> => {
-      try {
+    // 获取视频信息
+    const getMediaInfo = async (
+      file: string
+    ): Promise<{
+      dur?: number
+      vcodec?: string
+      acodec?: string
+      w?: number
+      h?: number
+      fps?: number
+    }> => {
+      return new Promise((resolve) => {
         const p = spawn(FFPROBE_CMD, [
           '-v',
           'error',
           '-show_entries',
-          'format_tags=creation_time:stream_tags=creation_time',
+          'format=duration',
           '-of',
-          'default=noprint_wrappers=1',
+          'csv=p=0',
           file
         ])
+        mergeScanProcs.add(p)
         let out = ''
-        await new Promise<void>((resolve) => {
-          p.stdout.on('data', (d) => (out += String(d)))
-          p.on('close', () => resolve())
+        p.stdout.on('data', (d) => (out += String(d)))
+        p.on('close', () => {
+          mergeScanProcs.delete(p)
+          const res: {
+            dur?: number
+            vcodec?: string
+            acodec?: string
+            w?: number
+            h?: number
+            fps?: number
+          } = {}
+          const d = parseFloat(out.trim())
+          if (Number.isFinite(d)) res.dur = d
+          resolve(res)
         })
-        const m = out.match(/creation_time=(.*)/)
-        if (m) {
-          const s = m[1].trim()
-          const t = Date.parse(s)
-          if (Number.isFinite(t)) return t
-        }
-      } catch {}
-      try {
-        const st = await fs.promises.stat(file)
-        return st.birthtimeMs || st.ctimeMs || Date.now()
-      } catch {
-        return Date.now()
-      }
+      })
     }
 
-    const getVideoProps = async (
-      file: string
-    ): Promise<{ vcodec?: string; acodec?: string; w?: number; h?: number; fps?: number }> => {
-      const res: { vcodec?: string; acodec?: string; w?: number; h?: number; fps?: number } = {}
-      try {
-        const pv = spawn(FFPROBE_CMD, [
-          '-v',
-          'error',
-          '-select_streams',
-          'v:0',
-          '-show_entries',
-          'stream=codec_name,width,height,r_frame_rate',
-          '-of',
-          'csv=s=,:p=0',
-          file
-        ])
-        let ov = ''
-        await new Promise<void>((resolve) => {
-          pv.stdout.on('data', (d) => (ov += String(d)))
-          pv.on('close', () => resolve())
-        })
-        const parts = ov.trim().split(',')
-        if (parts.length >= 4) {
-          res.vcodec = parts[0]
-          res.w = Number(parts[1])
-          res.h = Number(parts[2])
-          const fr = parts[3]
-          const [a, b] = fr.split('/').map((x) => Number(x))
-          if (Number.isFinite(a) && Number.isFinite(b) && b) res.fps = a / b
-        }
-      } catch {}
-      try {
-        const pa = spawn(FFPROBE_CMD, [
-          '-v',
-          'error',
-          '-select_streams',
-          'a:0',
-          '-show_entries',
-          'stream=codec_name',
-          '-of',
-          'csv=s=,:p=0',
-          file
-        ])
-        let oa = ''
-        await new Promise<void>((resolve) => {
-          pa.stdout.on('data', (d) => (oa += String(d)))
-          pa.on('close', () => resolve())
-        })
-        res.acodec = oa.trim() || undefined
-      } catch {}
-      return res
-    }
-
+    // 格式化时间
     const fmtNow = (): string => {
       const d = new Date()
       const pad = (n: number) => String(n).padStart(2, '0')
@@ -795,33 +749,118 @@ export const registerFfmpegIPC = (): void => {
         pad(d.getSeconds())
       )
     }
-
+    // 发送开始事件
     const channelStart = (total?: number): void =>
-      event.sender.send(channel, { status: 'start', total })
+      event.sender.send(channel, { status: 'start', total, phase: 'merge' })
+
+    // 发送错误事件
     const channelError = (message: string): void =>
       event.sender.send(channel, { status: 'error', message })
 
     try {
+      mergeCanceled = false
       if (!inputDir || !outputDir) {
         channelError('参数不完整')
         return
       }
+      // 检查输入文件夹是否存在
       const inStat = await fs.promises.stat(inputDir).catch(() => null as any)
+      // 检查输出文件夹是否存在
       const outStat = await fs.promises.stat(outputDir).catch(() => null as any)
       if (!inStat || !inStat.isDirectory()) {
         channelError('输入文件夹不存在')
         return
       }
+      // 检查输出文件夹是否存在，不存在则创建
       if (!outStat || !outStat.isDirectory()) {
         await fs.promises.mkdir(outputDir, { recursive: true }).catch(() => null)
       }
-
+      // 扫描输入文件夹下的视频文件
       const files = await scanRecursive(inputDir)
       if (files.length === 0) {
         channelError('未找到视频文件')
         return
       }
+      if (!noProgress) {
+        event.sender.send(channel, {
+          status: 'progress',
+          phase: 'scan',
+          progress: 0,
+          scanCount: 0,
+          scanTotal: files.length
+        })
+      }
 
+      if (noProgress) {
+        const ts = fmtNow()
+        const outPath = path.join(outputDir, `merged_${ts}.mkv`)
+        const logPath = path.join(outputDir, `merged_${ts}.log`)
+        const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+        logStream.write(`输入文件夹: ${inputDir}\n`)
+        logStream.write(`输出文件: ${outPath}\n`)
+        logStream.write(`共 ${files.length} 个文件\n`)
+        for (const f of files) {
+          logStream.write(`${f}\n`)
+        }
+
+        event.sender.send(channel, {
+          status: 'start',
+          total: files.length,
+          phase: 'merge',
+          noProgress: true
+        })
+        event.sender.send(channel, { status: 'progress', message: `输出文件：${outPath}`, noProgress: true })
+        event.sender.send(channel, { status: 'progress', message: `合并文件数：${files.length}`, noProgress: true })
+
+        const listPath = path.join(outputDir, 'list.txt')
+        const listContent = files.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join('\n')
+        await fs.promises.unlink(listPath).catch(() => null)
+        await fs.promises.writeFile(listPath, listContent).catch(() => null)
+
+        const finalArgs: string[] = [
+          '-y',
+          '-f',
+          'concat',
+          '-safe',
+          '0',
+          '-i',
+          listPath,
+          '-c',
+          'copy',
+          '-movflags',
+          '+faststart',
+          outPath
+        ]
+
+        const proc = spawn(FFMPEG_CMD, finalArgs)
+        currentMergeProc = proc
+        proc.stderr.on('data', (d: any) => {
+          logStream.write(String(d))
+          event.sender.send(channel, { status: 'progress', message: String(d), noProgress: true })
+        })
+        proc.on('error', (err) => {
+          event.sender.send(channel, { status: 'error', message: String(err) })
+        })
+        proc.on('close', async (code) => {
+          await fs.promises.unlink(listPath).catch(() => null)
+          logStream.end()
+          if (proc.killed) {
+            event.sender.send(channel, { status: 'canceled' })
+            return
+          }
+          if (code === 0 && fs.existsSync(outPath)) {
+            event.sender.send(channel, { status: 'done', outputPath: outPath })
+          } else {
+            event.sender.send(channel, {
+              status: 'error',
+              message: `ffmpeg exited with code ${code}`
+            })
+          }
+        })
+        return
+      }
+
+      // 并行获取视频信息
       const metas: Array<{
         file: string
         ctime: number
@@ -830,18 +869,85 @@ export const registerFfmpegIPC = (): void => {
         size: number
       }> = []
 
-      for (const f of files) {
-        try {
-          const [ctime, dur, props, st] = await Promise.all([
-            getCreationTime(f),
-            probeDurationSeconds(f),
-            getVideoProps(f),
-            fs.promises.stat(f)
-          ])
-          if (!Number.isFinite(dur) || dur <= 0) continue
-          metas.push({ file: f, ctime, dur, props, size: st.size })
-        } catch {}
+      let scanned = 0
+      // cpu 核心数
+      const cores = os.cpus()?.length || 4
+      // 并发数 8-32
+      let CONC = Math.min(32, Math.max(8, cores * 2))
+      {
+        // 截取前 64 个文件进行平均大小判断
+        const sample = files.slice(0, Math.min(64, files.length))
+        const stats = await Promise.all(
+          sample.map((f) => fs.promises.stat(f).catch(() => null as any))
+        )
+        const sizes = stats.filter((s: any) => s && s.isFile()).map((s: any) => s.size)
+        const avg = sizes.length
+          ? sizes.reduce((a: number, b: number) => a + b, 0) / sizes.length
+          : 0
+        if (avg >= 500 * 1024 * 1024) CONC = Math.max(4, Math.min(cores, 8))
+        else if (avg >= 100 * 1024 * 1024) CONC = Math.min(cores * 2, 16)
+        else CONC = Math.min(cores * 3, 24)
       }
+      let idx = 0
+      const worker = async (): Promise<void> => {
+        while (idx < files.length && !mergeCanceled) {
+          const i = idx++
+          const f = files[i]
+          try {
+            const [info, st] = await Promise.all([getMediaInfo(f), fs.promises.stat(f)])
+            const dur = info.dur || 0
+            if (!Number.isFinite(dur) || dur <= 0) {
+              scanned += 1
+              const sp = files.length
+                ? Math.max(0, Math.min(100, (scanned / files.length) * 100))
+                : 100
+              event.sender.send(channel, {
+                status: 'progress',
+                phase: 'scan',
+                progress: sp,
+                scanCount: scanned,
+                scanTotal: files.length
+              })
+              continue
+            }
+            const ctime = st.birthtimeMs || st.ctimeMs || Date.now()
+            metas.push({
+              file: f,
+              ctime,
+              dur,
+              props: {
+                vcodec: info.vcodec,
+                acodec: info.acodec,
+                w: info.w,
+                h: info.h,
+                fps: info.fps
+              },
+              size: st.size
+            })
+          } catch {}
+          scanned += 1
+          const sp = files.length ? Math.max(0, Math.min(100, (scanned / files.length) * 100)) : 100
+          event.sender.send(channel, {
+            status: 'progress',
+            phase: 'scan',
+            progress: sp,
+            scanCount: scanned,
+            scanTotal: files.length
+          })
+        }
+      }
+
+      await Promise.all(Array.from({ length: CONC }).map(() => worker()))
+      if (mergeCanceled) {
+        return
+      }
+      event.sender.send(channel, {
+        status: 'progress',
+        phase: 'scan',
+        progress: 100,
+        scanCount: scanned,
+        scanTotal: files.length
+      })
 
       if (metas.length === 0) {
         channelError('没有有效的视频文件')
@@ -853,12 +959,9 @@ export const registerFfmpegIPC = (): void => {
       metas.sort((a, b) => a.ctime - b.ctime)
 
       const totalDuration = metas.reduce((s, x) => s + (Number(x.dur) || 0), 0)
-      const w = metas.map((m) => m.props.w || 0)
-      const h = metas.map((m) => m.props.h || 0)
-      const fps = metas.map((m) => m.props.fps || 0)
 
       const ts = fmtNow()
-      const outPath = path.join(outputDir, `merged_${ts}.mp4`)
+      const outPath = path.join(outputDir, `merged_${ts}.mkv`)
       const logPath = path.join(outputDir, `merged_${ts}.log`)
       const logStream = fs.createWriteStream(logPath, { flags: 'a' })
       logStream.write(`输入文件夹: ${inputDir}\n`)
@@ -874,68 +977,58 @@ export const registerFfmpegIPC = (): void => {
       }
 
       {
-        const args: string[] = ['-y']
-        const n = metas.length
-        const audioIndex: number[] = []
-        let extraInputs = 0
-        for (let i = 0; i < n; i++) {
-          const m = metas[i]
-          args.push('-i', m.file)
-          const hasAudio = !!m.props.acodec
-          if (hasAudio) {
-            audioIndex.push(i)
-          } else {
-            args.push('-f', 'lavfi', '-t', m.dur.toFixed(3), '-i', 'anullsrc=r=48000:cl=stereo')
-            audioIndex.push(n + extraInputs)
-            extraInputs++
+        const tryDirectConcat = async (): Promise<boolean> => {
+          const listPath = path.join(outputDir, 'list.txt')
+          const listContent = metas.map((m) => `file '${m.file.replace(/'/g, "'\\''")}'`).join('\n')
+          await fs.promises.unlink(listPath).catch(() => null)
+          await fs.promises.writeFile(listPath, listContent).catch(() => null)
+          const finalArgs: string[] = [
+            '-y',
+            '-f',
+            'concat',
+            '-safe',
+            '0',
+            '-i',
+            listPath,
+            '-c',
+            'copy',
+            '-movflags',
+            '+faststart'
+          ]
+          try {
+            await runFfmpeg(
+              event,
+              channel,
+              [...finalArgs, outPath],
+              outPath,
+              undefined,
+              (p) => {
+                currentMergeProc = p
+                p.stderr.on('data', (d: any) => {
+                  logStream.write(String(d))
+                })
+              },
+              totalDuration,
+              0
+            )
+            await fs.promises.unlink(listPath).catch(() => null)
+            return true
+          } catch {
+            await fs.promises.unlink(listPath).catch(() => null)
+            return false
           }
         }
 
-        const targetW = Math.max(...w.filter((x) => Number.isFinite(x))) || metas[0].props.w || 1280
-        const targetH = Math.max(...h.filter((x) => Number.isFinite(x))) || metas[0].props.h || 720
-        const targetFps = Math.round(fps.find((x) => Number.isFinite(x) && x > 0) || 30)
-
-        const chains: string[] = []
-        for (let i = 0; i < n; i++) {
-          chains.push(
-            `[${i}:v:0]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,` +
-              `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${targetFps},setpts=PTS-STARTPTS,format=yuv420p[v${i}]`
-          )
-          chains.push(
-            `[${audioIndex[i]}:a:0]aformat=channel_layouts=stereo:sample_rates=48000,asetpts=PTS-STARTPTS[a${i}]`
-          )
+        const ok = await tryDirectConcat()
+        if (!ok) {
+          channelError('合并失败：仅拼接模式不支持参数不一致的视频')
+          logStream.end()
+          return
         }
-        const concatInputs = Array.from({ length: n })
-          .map((_, i) => `[v${i}][a${i}]`)
-          .join('')
-        const filter = `${chains.join(';')};${concatInputs}concat=n=${n}:v=1:a=1[v][a]`
-
-        args.push('-filter_complex', filter, '-map', '[v]', '-map', '[a]')
-        if ((codec || 'h264') === 'hevc') {
-          args.push('-c:v', 'libx265')
-          args.push('-tag:v', 'hvc1')
-        } else {
-          args.push('-c:v', 'libx264')
-        }
-        args.push('-c:a', 'aac', '-movflags', '+faststart')
-        await runFfmpeg(
-          event,
-          channel,
-          [...args, outPath],
-          outPath,
-          undefined,
-          (p) => {
-            currentMergeProc = p
-            p.stderr.on('data', (d: any) => {
-              logStream.write(String(d))
-            })
-          },
-          totalDuration
-        )
       }
 
       logStream.end()
-      event.sender.send(channel, { status: 'done', outputPath: outPath })
+      if (!mergeCanceled) event.sender.send(channel, { status: 'done', outputPath: outPath })
     } catch (e) {
       const msg = String(e || '未知错误')
       event.sender.send('videoMerge-status', { status: 'error', message: msg })
@@ -943,12 +1036,34 @@ export const registerFfmpegIPC = (): void => {
   })
 
   ipcMain.handle('videoMerge-cancel', async () => {
+    mergeCanceled = true
     if (currentMergeProc) {
       try {
         currentMergeProc.kill('SIGINT')
       } finally {
         currentMergeProc = null
       }
+    }
+    for (const p of Array.from(mergeScanProcs)) {
+      try {
+        p.kill('SIGINT')
+      } catch {}
+      mergeScanProcs.delete(p)
+    }
+    for (const fp of mergeTmpArtifacts.splice(0)) {
+      try {
+        await fs.promises.unlink(fp)
+      } catch {}
+    }
+    for (const dir of mergeTmpDirs.splice(0)) {
+      try {
+        await fs.promises.rmdir(dir)
+      } catch {}
+    }
+    for (const bw of BrowserWindow.getAllWindows()) {
+      try {
+        bw.webContents.send('videoMerge-status', { status: 'canceled' })
+      } catch {}
     }
   })
 }
