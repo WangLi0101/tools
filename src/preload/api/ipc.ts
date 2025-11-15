@@ -1,8 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import fs from 'fs'
 import path from 'path'
 import { spawnSync } from 'child_process'
 export const registerIpc = () => {
+  const send = (payload: any) => {
+    BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('update-status', payload))
+  }
   ipcMain.handle('save-as', async (_event, args) => {
     const { sourcePath, defaultPath, filters } = (args || {}) as {
       sourcePath: string
@@ -25,6 +29,46 @@ export const registerIpc = () => {
     if (window) {
       window.minimize()
     }
+  })
+  ipcMain.handle('check-for-updates', async () => {
+    if (!app.isPackaged) {
+      send({ status: 'update-not-available' })
+      return
+    }
+    send({ status: 'checking' })
+    try {
+      autoUpdater.autoDownload = false
+      autoUpdater.checkForUpdates()
+    } catch (e: any) {
+      send({ status: 'error', message: String(e?.message || e) })
+    }
+  })
+  ipcMain.handle('download-update', async () => {
+    if (!app.isPackaged) return
+    try {
+      await autoUpdater.downloadUpdate()
+    } catch (e: any) {
+      send({ status: 'error', message: String(e?.message || e) })
+    }
+  })
+  ipcMain.on('quit-and-install', () => {
+    if (!app.isPackaged) return
+    autoUpdater.quitAndInstall()
+  })
+  autoUpdater.on('update-available', (info) => {
+    send({ status: 'update-available', info })
+  })
+  autoUpdater.on('update-not-available', () => {
+    send({ status: 'update-not-available' })
+  })
+  autoUpdater.on('download-progress', (p) => {
+    send({ status: 'download-progress', percent: p.percent, transferred: p.transferred, total: p.total, bytesPerSecond: p.bytesPerSecond })
+  })
+  autoUpdater.on('update-downloaded', (info) => {
+    send({ status: 'update-downloaded', info })
+  })
+  autoUpdater.on('error', (e) => {
+    send({ status: 'error', message: String((e as any)?.message || e) })
   })
   ipcMain.handle('select-directory', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
