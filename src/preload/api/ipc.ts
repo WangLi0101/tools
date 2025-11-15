@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { spawnSync } from 'child_process'
 export const registerIpc = () => {
+  // 发送更新状态
   const send = (payload: any) => {
     BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('update-status', payload))
   }
@@ -30,6 +31,7 @@ export const registerIpc = () => {
       window.minimize()
     }
   })
+  // 检查更新
   ipcMain.handle('check-for-updates', async () => {
     if (!app.isPackaged) {
       send({ status: 'update-not-available' })
@@ -37,7 +39,9 @@ export const registerIpc = () => {
     }
     send({ status: 'checking' })
     try {
+      // 禁用自动下载
       autoUpdater.autoDownload = false
+      // 检查更新
       autoUpdater.checkForUpdates()
     } catch (e: any) {
       send({ status: 'error', message: String(e?.message || e) })
@@ -55,12 +59,15 @@ export const registerIpc = () => {
     if (!app.isPackaged) return
     autoUpdater.quitAndInstall()
   })
+  // 可下载更新时
   autoUpdater.on('update-available', (info) => {
     send({ status: 'update-available', info })
   })
+  // 没有可用更新时
   autoUpdater.on('update-not-available', () => {
     send({ status: 'update-not-available' })
   })
+  // 下载进度更新时
   autoUpdater.on('download-progress', (p) => {
     send({
       status: 'download-progress',
@@ -70,9 +77,11 @@ export const registerIpc = () => {
       bytesPerSecond: p.bytesPerSecond
     })
   })
+  // 下载完成时
   autoUpdater.on('update-downloaded', (info) => {
     send({ status: 'update-downloaded', info })
   })
+  // 下载错误时
   autoUpdater.on('error', (e) => {
     send({ status: 'error', message: String((e as any)?.message || e) })
   })
