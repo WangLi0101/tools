@@ -22,7 +22,6 @@ const getBin = (name: 'ffmpeg' | 'ffprobe'): string => {
 
 const FFMPEG_CMD = getBin('ffmpeg')
 const FFPROBE_CMD = getBin('ffprobe')
-console.log(FFPROBE_CMD)
 
 let currentMergeProc: any
 let mergeCanceled = false

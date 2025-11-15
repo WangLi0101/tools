@@ -1,12 +1,11 @@
-import { FolderOpen, Play, Pause, X, FileText } from 'lucide-react'
+import { FolderOpen, Play, X, FileText } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 
-type GroupStatus = 'waiting' | 'merging' | 'paused' | 'done' | 'error' | 'canceled'
+type GroupStatus = 'waiting' | 'merging' | 'done' | 'error' | 'canceled'
 interface GroupItem {
   key: string
   lens: string
@@ -37,9 +36,6 @@ const GroupPage = (): React.JSX.Element => {
   const [groups, setGroups] = useState<GroupItem[]>([])
   const groupsRef = useRef<GroupItem[]>([])
   const [running, setRunning] = useState<boolean>(false)
-  const [pauseRequested, setPauseRequested] = useState<boolean>(false)
-  const pauseRef = useRef<boolean>(false)
-  const [currentTaskId, setCurrentTaskId] = useState<string>('')
 
   const unsubRef = useRef<(() => void) | null>(null)
   const startRequestedRef = useRef<boolean>(false)
@@ -51,7 +47,7 @@ const GroupPage = (): React.JSX.Element => {
       !!inputDir &&
       !!outputDir &&
       selectedFormats.length > 0 &&
-      groups.some((g) => g.status === 'waiting' || g.status === 'error' || g.status === 'paused') &&
+      groups.some((g) => g.status === 'waiting' || g.status === 'error') &&
       !running,
     [inputDir, outputDir, selectedFormats.length, groups, running]
   )
@@ -139,9 +135,6 @@ const GroupPage = (): React.JSX.Element => {
     } catch {}
   }, [selectedFormats])
 
-  useEffect(() => {
-    pauseRef.current = pauseRequested
-  }, [pauseRequested])
 
   useEffect(() => {
     const unsubscribe = window.ffmpeg.onVideoGroupStatus((payload) => {
@@ -152,8 +145,6 @@ const GroupPage = (): React.JSX.Element => {
         const g = { ...prev[idx] }
         if (status === 'start') {
           setRunning(true)
-          setPauseRequested(false)
-          setCurrentTaskId(taskId)
           g.status = 'merging'
           g.progress = 0
           g.lastMessage = ''
@@ -170,7 +161,7 @@ const GroupPage = (): React.JSX.Element => {
           g.progress = undefined
           g.lastMessage = message || ''
         } else if (status === 'canceled') {
-          g.status = pauseRef.current ? 'paused' : 'canceled'
+          g.status = 'canceled'
           g.progress = undefined
         }
         const next = [...prev]
@@ -180,6 +171,7 @@ const GroupPage = (): React.JSX.Element => {
       })
 
       if ((status === 'done' || status === 'error') && startRequestedRef.current) {
+        setRunning(false)
         runNext()
       } else if (status === 'canceled') {
         setRunning(false)
@@ -194,12 +186,9 @@ const GroupPage = (): React.JSX.Element => {
 
   const runNext = async (): Promise<void> => {
     if (!startRequestedRef.current) return
-    if (pauseRef.current) {
-      setRunning(false)
-      return
-    }
+    if (running) return
     const next = groupsRef.current.find(
-      (g) => g.status === 'waiting' || g.status === 'error' || g.status === 'paused'
+      (g) => g.status === 'waiting'
     )
     if (!next) {
       setRunning(false)
@@ -208,7 +197,6 @@ const GroupPage = (): React.JSX.Element => {
       return
     }
     setRunning(true)
-    setCurrentTaskId(next.key)
     await window.ffmpeg.mergeVideosByList({
       taskId: next.key,
       files: next.files,
@@ -232,20 +220,11 @@ const GroupPage = (): React.JSX.Element => {
       return
     }
     startRequestedRef.current = true
-    setPauseRequested(false)
     await runNext()
   }
 
-  const onPause = async (): Promise<void> => {
-    if (!running) return
-    setPauseRequested(true)
-    await window.ffmpeg.cancelVideoGroup(currentTaskId)
-  }
-
   const onCancelAll = async (): Promise<void> => {
-    setPauseRequested(false)
     setRunning(false)
-    setCurrentTaskId('')
     await window.ffmpeg.cancelVideoGroup()
     setGroups((prev) => {
       const next: GroupItem[] = prev.map((g) => ({
@@ -330,10 +309,7 @@ const GroupPage = (): React.JSX.Element => {
                 <Play className="size-4" />
                 开始
               </Button>
-              <Button variant="outline" onClick={onPause} disabled={!running}>
-                <Pause className="size-4" />
-                暂停
-              </Button>
+              
               <Button variant="outline" onClick={onCancelAll}>
                 <X className="size-4" />
                 取消
@@ -351,22 +327,12 @@ const GroupPage = (): React.JSX.Element => {
                     <div className="text-xs text-muted-foreground">
                       {g.status === 'waiting' && '等待'}
                       {g.status === 'merging' && '进行中'}
-                      {g.status === 'paused' && '已暂停'}
+                      
                       {g.status === 'done' && '已完成'}
                       {g.status === 'error' && '错误'}
                       {g.status === 'canceled' && '已取消'}
                     </div>
                   </div>
-                  {typeof g.progress === 'number' && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {g.progress.toFixed(1)}%
-                        </span>
-                      </div>
-                      <Progress value={g.progress} />
-                    </div>
-                  )}
                   {g.outputPath && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground break-all">
                       <FileText className="size-4" />
