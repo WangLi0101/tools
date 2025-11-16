@@ -1,23 +1,16 @@
-import { FolderOpen, Play, X, FileText } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { FolderOpen, Play, X } from 'lucide-react'
+import { useEffect, useState, useTransition } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
-
-type GroupStatus = 'waiting' | 'merging' | 'done' | 'error' | 'canceled'
 interface GroupItem {
-  key: string
-  lens: string
-  date: string
+  name: string
   files: string[]
-  status: GroupStatus
-  progress?: number
-  outputPath?: string
-  lastMessage?: string
+  status: 'ready' | 'merging' | 'done' | 'error'
 }
-
 const GroupPage = (): React.JSX.Element => {
+  const [isPending, startTransition] = useTransition()
   const [inputDir, setInputDir] = useState<string>('')
   const [outputDir, setOutputDir] = useState<string>(
     () => localStorage.getItem('group.outDir') || ''
@@ -33,39 +26,27 @@ const GroupPage = (): React.JSX.Element => {
     } catch {}
     return ['mp4']
   })
-  const [groups, setGroups] = useState<GroupItem[]>([])
-  const groupsRef = useRef<GroupItem[]>([])
-  const [running, setRunning] = useState<boolean>(false)
-
-  const unsubRef = useRef<(() => void) | null>(null)
-  const startRequestedRef = useRef<boolean>(false)
+  const [group, setGroup] = useState<GroupItem[]>([])
 
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
-
-  const canRun = useMemo(
-    () =>
-      !!inputDir &&
-      !!outputDir &&
-      selectedFormats.length > 0 &&
-      groups.some((g) => g.status === 'waiting' || g.status === 'error') &&
-      !running,
-    [inputDir, outputDir, selectedFormats.length, groups, running]
-  )
-
-  const normalizePath = (p: string): string => String(p || '').replace(/[\\/]+/g, '/')
-  const getBaseName = (p: string): string => {
-    const n = normalizePath(p)
-    const idx = n.lastIndexOf('/')
-    return idx >= 0 ? n.slice(idx + 1) : n
-  }
-
+  useEffect(() => {
+    const statusCallBack = window.ffmpeg.onGroupMergeStatus((payload) => {
+      const { groupName, status } = payload
+      setGroup((prev) => prev.map((item) => (item.name === groupName ? { ...item, status } : item)))
+    })
+    return () => {
+      statusCallBack()
+    }
+  }, [])
+  // 选择输入文件夹
   const chooseInputDir = async (): Promise<void> => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
       setInputDir(r.path)
-      await scanAndGroup(r.path)
+      getFilesAndGroup(r.path)
     }
   }
+  // 选择输出文件夹
   const chooseOutputDir = async (): Promise<void> => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
@@ -76,167 +57,54 @@ const GroupPage = (): React.JSX.Element => {
     }
   }
 
-  const parseGroupKey = (name: string): { lens?: string; date?: string; time?: string } => {
-    const m = name.match(/^(\d{2})_(\d{8})(\d{6})/)
-    if (m) return { lens: m[1], date: m[2], time: m[3] }
-    const m2 = name.match(/^(\d{2})_(\d{8})/)
-    if (m2) return { lens: m2[1], date: m2[2] }
-    return {}
-  }
-
-  const scanAndGroup = async (dir: string): Promise<void> => {
-    try {
-      const { files } = await window.ffmpeg.scanVideoFiles({
-        inputDir: dir,
-        formats: selectedFormats
-      })
-      if (!files || !files.length) {
-        setGroups([])
-        toast.error('未找到视频文件')
-        return
-      }
-      const map = new Map<string, GroupItem>()
-      for (const f of files) {
-        const bn = getBaseName(f)
-        const { lens, date } = parseGroupKey(bn)
-        if (!lens || !date) continue
-        const key = `${lens}_${date}`
-        const g = map.get(key) || { key, lens, date, files: [], status: 'waiting' }
-        g.files.push(f)
-        map.set(key, g)
-      }
-      const arr = Array.from(map.values())
-      for (const g of arr) {
-        g.files.sort((a, b) => {
-          const an = getBaseName(a)
-          const bn = getBaseName(b)
-          const pa = parseGroupKey(an)
-          const pb = parseGroupKey(bn)
-          const ta = pa.time ? parseInt(pa.time) : 0
-          const tb = pb.time ? parseInt(pb.time) : 0
-          if (ta !== tb) return ta - tb
-          return an.localeCompare(bn)
-        })
-      }
-      arr.sort((a, b) => {
-        if (a.lens !== b.lens) return a.lens.localeCompare(b.lens)
-        return a.date.localeCompare(b.date)
-      })
-      groupsRef.current = arr
-      setGroups(arr)
-    } catch (e) {
-      toast.error(`扫描失败：${String(e || '')}`)
-    }
-  }
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('group.formats', JSON.stringify(selectedFormats))
-    } catch {}
-  }, [selectedFormats])
-
-
-  useEffect(() => {
-    const unsubscribe = window.ffmpeg.onVideoGroupStatus((payload) => {
-      const { taskId, status, progress, outputPath, message } = payload
-      setGroups((prev) => {
-        const idx = prev.findIndex((g) => g.key === taskId)
-        if (idx < 0) return prev
-        const g = { ...prev[idx] }
-        if (status === 'start') {
-          setRunning(true)
-          g.status = 'merging'
-          g.progress = 0
-          g.lastMessage = ''
-        } else if (status === 'progress') {
-          g.status = 'merging'
-          if (typeof progress === 'number') g.progress = progress
-          if (typeof message === 'string') g.lastMessage = message
-        } else if (status === 'done') {
-          g.status = 'done'
-          g.progress = undefined
-          g.outputPath = outputPath || ''
-        } else if (status === 'error') {
-          g.status = 'error'
-          g.progress = undefined
-          g.lastMessage = message || ''
-        } else if (status === 'canceled') {
-          g.status = 'canceled'
-          g.progress = undefined
-        }
-        const next = [...prev]
-        next[idx] = g
-        groupsRef.current = next
-        return next
-      })
-
-      if ((status === 'done' || status === 'error') && startRequestedRef.current) {
-        setRunning(false)
-        runNext()
-      } else if (status === 'canceled') {
-        setRunning(false)
-      }
+  // 获取文件并分组
+  const getFilesAndGroup = async (path: string): Promise<void> => {
+    const res = await window.ffmpeg.scanVideoGruopFiles({
+      inputDir: path,
+      formats: selectedFormats
     })
-    unsubRef.current = unsubscribe
-    return () => {
-      unsubRef.current?.()
-      unsubRef.current = null
-    }
-  }, [])
-
-  const runNext = async (): Promise<void> => {
-    if (!startRequestedRef.current) return
-    if (running) return
-    const next = groupsRef.current.find(
-      (g) => g.status === 'waiting'
-    )
-    if (!next) {
-      setRunning(false)
-      startRequestedRef.current = false
-      toast.success('所有分组已完成')
-      return
-    }
-    setRunning(true)
-    await window.ffmpeg.mergeVideosByList({
-      taskId: next.key,
-      files: next.files,
-      outputDir,
-      outputName: next.key,
-      noProgress: false
-    })
+    groupAndMerge(res.files)
   }
 
-  const onStart = async (): Promise<void> => {
-    if (!inputDir) {
-      toast.error('请选择输入文件夹')
-      return
+  const groupAndMerge = (files: { url: string; createTime: number }[]) => {
+    const map = new Map<string, string[]>()
+    for (const f of files) {
+      const base = f.url.split(/[\\/]/).pop() || ''
+      const m = base.match(/^(\d{2})_(\d{8})/)
+      const key = m ? `${m[1]}_${m[2]}` : 'unknown'
+      const list = map.get(key) || []
+      list.push(f.url)
+      map.set(key, list)
     }
+    const result: GroupItem[] = []
+    for (const [name, list] of map) {
+      result.push({ name, files: list, status: 'ready' })
+    }
+    result.sort((a, b) => a.name.localeCompare(b.name))
+    setGroup(result)
+  }
+  // 开始合并
+  const start = async () => {
     if (!outputDir) {
       toast.error('请选择输出文件夹')
       return
     }
-    if (!groups.length) {
-      toast.error('没有可合并的分组')
+    if (!group.length) {
+      toast.error('请先选择要合并的视频')
       return
     }
-    startRequestedRef.current = true
-    await runNext()
-  }
-
-  const onCancelAll = async (): Promise<void> => {
-    setRunning(false)
-    await window.ffmpeg.cancelVideoGroup()
-    setGroups((prev) => {
-      const next: GroupItem[] = prev.map((g) => ({
-        ...g,
-        status: 'waiting' as GroupStatus,
-        progress: undefined
-      }))
-      groupsRef.current = next
-      return next
+    startTransition(async () => {
+      try {
+        await window.ffmpeg.groupMergeStart({
+          outputDir,
+          group
+        })
+        toast.success('合并完成')
+      } catch {
+        toast.error('合并失败')
+      }
     })
   }
-
   return (
     <div className="w-full overflow-x-hidden">
       <div className="space-y-4">
@@ -286,15 +154,12 @@ const GroupPage = (): React.JSX.Element => {
                     <label key={fmt} className="flex items-center gap-2 text-xs">
                       <Checkbox
                         checked={selectedFormats.includes(fmt)}
-                        onCheckedChange={async (checked) => {
-                          setSelectedFormats((prev) => {
-                            const next =
-                              checked === true
-                                ? Array.from(new Set([...prev, fmt]))
-                                : prev.filter((x) => x !== fmt)
-                            return next
-                          })
-                          if (inputDir) await scanAndGroup(inputDir)
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedFormats([...selectedFormats, fmt])
+                          } else {
+                            setSelectedFormats(selectedFormats.filter((f) => f !== fmt))
+                          }
                         }}
                       />
                       <span>{fmt}</span>
@@ -305,40 +170,29 @@ const GroupPage = (): React.JSX.Element => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button onClick={onStart} disabled={!canRun}>
+              <Button onClick={start} disabled={isPending}>
                 <Play className="size-4" />
-                开始
+                {isPending ? '合并中' : '开始合并'}
               </Button>
-              
-              <Button variant="outline" onClick={onCancelAll}>
+
+              <Button variant="outline">
                 <X className="size-4" />
                 取消
               </Button>
             </div>
-
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>分组列表</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <div className="space-y-2">
-              {groups.length === 0 && <div className="text-xs text-muted-foreground">暂无分组</div>}
-              {groups.map((g) => (
-                <div key={g.key} className="rounded border p-2 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm">
-                      {g.key}（{g.files.length}）
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {g.status === 'waiting' && '等待'}
-                      {g.status === 'merging' && '进行中'}
-                      
-                      {g.status === 'done' && '已完成'}
-                      {g.status === 'error' && '错误'}
-                      {g.status === 'canceled' && '已取消'}
-                    </div>
-                  </div>
-                  {g.outputPath && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground break-all">
-                      <FileText className="size-4" />
-                      输出：{g.outputPath}
-                    </div>
-                  )}
+              {group.map((item) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <span>{item.name}</span>
+                  <span className="text-xs text-muted-foreground">{item.files.length} 个文件</span>
+                  <span className="text-xs text-muted-foreground">{item.status}</span>
                 </div>
               ))}
             </div>

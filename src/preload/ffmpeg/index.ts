@@ -131,6 +131,17 @@ interface M3u8Status {
   message?: string
   outputPath?: string
 }
+export interface GroupMergeOptions {
+  outputDir: string
+  group: {
+    name: string
+    files: string[]
+  }[]
+}
+interface GroupMergeStPayload {
+  groupName: string
+  status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
+}
 export interface FfmpegApi {
   convertImage: (options: ConvertImageOptions) => Promise<ConvertImageResult>
   onConvertImageStatus: (listener: (payload: ConvertImageStatus) => void) => () => void
@@ -181,30 +192,15 @@ export interface FfmpegApi {
       noProgress?: boolean
     }) => void
   ) => () => void
-  // batches/batchIndex/batchCount are emitted for multi-step strategies
 
-  scanVideoFiles: (options: { inputDir: string; formats: string[] }) => Promise<{ files: string[] }>
-  mergeVideosByList: (options: {
-    taskId: string
-    files: string[]
-    outputDir: string
-    outputName?: string
-    noProgress?: boolean
-  }) => Promise<void>
-  cancelVideoGroup: (taskId?: string) => Promise<void>
-  onVideoGroupStatus: (
-    listener: (payload: {
-      taskId: string
-      status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
-      progress?: number
-      message?: string
-      outputPath?: string
-      total?: number
-      phase?: 'scan' | 'merge'
-      validation?: { expected?: number; actual?: number; diff?: number }
-      noProgress?: boolean
-    }) => void
-  ) => () => void
+  scanVideoGruopFiles: (options: {
+    inputDir: string
+    formats: string[]
+  }) => Promise<{ files: { url: string; createTime: number }[] }>
+  // 合并视频
+  groupMergeStart(options: GroupMergeOptions): Promise<void>
+  // 合并视频监听
+  onGroupMergeStatus: (listener: (payload: GroupMergeStPayload) => void) => () => void
 }
 
 export const ffmpegApi: FfmpegApi = {
@@ -292,11 +288,13 @@ export const ffmpegApi: FfmpegApi = {
     return () => ipcRenderer.removeListener('videoMerge-status', handler)
   },
 
-  scanVideoFiles: (options) => ipcRenderer.invoke('videoGroup-scan', options),
-  mergeVideosByList: (options) => ipcRenderer.invoke('videoGroup-mergeList', options),
-  cancelVideoGroup: (taskId) => ipcRenderer.invoke('videoGroup-cancel', taskId),
-  onVideoGroupStatus: (listener) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
+  scanVideoGruopFiles: (options) => ipcRenderer.invoke('videoGroup-scan', options),
+  // 合并视频
+  groupMergeStart: (options) => ipcRenderer.invoke('videoGroup-merge', options),
+  // 合并视频监听
+  onGroupMergeStatus: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: GroupMergeStPayload) =>
+      listener(payload)
     ipcRenderer.on('videoGroup-status', handler)
     return () => ipcRenderer.removeListener('videoGroup-status', handler)
   }
