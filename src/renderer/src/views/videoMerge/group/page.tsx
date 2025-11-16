@@ -103,18 +103,19 @@ const GroupPage = (): React.JSX.Element => {
   }
 
   const groupAndMerge = (files: { url: string; createTime: number }[]) => {
-    const map = new Map<string, string[]>()
+    const map = new Map<string, { url: string; createTime: number }[]>()
     for (const f of files) {
       const base = f.url.split(/[\\/]/).pop() || ''
       const m = base.match(/^(\d{2})_(\d{8})/)
       const key = m ? `${m[1]}_${m[2]}` : 'unknown'
       const list = map.get(key) || []
-      list.push(f.url)
+      list.push({ url: f.url, createTime: f.createTime })
       map.set(key, list)
     }
     const result: GroupItem[] = []
     for (const [name, list] of map) {
-      result.push({ name, files: list, status: 'ready' })
+      const sorted = list.slice().sort((a, b) => a.createTime - b.createTime)
+      result.push({ name, files: sorted.map((x) => x.url), status: 'ready' })
     }
     result.sort((a, b) => a.name.localeCompare(b.name))
     setGroup(result)

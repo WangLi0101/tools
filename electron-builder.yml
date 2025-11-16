@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: electron_ffmpeg
+productName: desktop_tools
 directories:
   buildResources: build
 files:
@@ -17,7 +17,7 @@ extraResources:
 asarUnpack:
   - resources/**
 win:
-  executableName: electron_ffmpeg
+  executableName: desktop_tools
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
