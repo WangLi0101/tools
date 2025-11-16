@@ -1,16 +1,25 @@
-import { FolderOpen, Play, X } from 'lucide-react'
-import { useEffect, useState, useTransition } from 'react'
+import { FolderOpen, Play, X, Video, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemHeader,
+  ItemSeparator,
+  ItemTitle
+} from '@/components/ui/item'
 import { toast } from 'sonner'
 interface GroupItem {
   name: string
   files: string[]
-  status: 'ready' | 'merging' | 'done' | 'error'
+  status: 'ready' | 'start' | 'done' | 'error' | 'canceled' | 'merging'
 }
 const GroupPage = (): React.JSX.Element => {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
   const [inputDir, setInputDir] = useState<string>('')
   const [outputDir, setOutputDir] = useState<string>(
     () => localStorage.getItem('group.outDir') || ''
@@ -27,6 +36,33 @@ const GroupPage = (): React.JSX.Element => {
     return ['mp4']
   })
   const [group, setGroup] = useState<GroupItem[]>([])
+
+  const STATUS_MAP = {
+    ready: {
+      label: '待处理',
+      cls: 'bg-muted text-muted-foreground'
+    },
+    start: {
+      label: '合并中',
+      cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+    },
+    merging: {
+      label: '合并中',
+      cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+    },
+    done: {
+      label: '已完成',
+      cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+    },
+    error: {
+      label: '错误',
+      cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+    },
+    canceled: {
+      label: '已取消',
+      cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+    }
+  } as const
 
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
   useEffect(() => {
@@ -93,17 +129,26 @@ const GroupPage = (): React.JSX.Element => {
       toast.error('请先选择要合并的视频')
       return
     }
-    startTransition(async () => {
-      try {
-        await window.ffmpeg.groupMergeStart({
-          outputDir,
-          group
-        })
-        toast.success('合并完成')
-      } catch {
-        toast.error('合并失败')
-      }
-    })
+    setIsPending(true)
+    try {
+      await window.ffmpeg.groupMergeStart({
+        outputDir,
+        group
+      })
+      toast.success('合并完成')
+    } catch {
+      toast.error('合并失败')
+    } finally {
+      setIsPending(false)
+    }
+  }
+  // 取消合并
+  const cancelMerge = async () => {
+    if (!isPending) {
+      toast.error('请先开始合并')
+      return
+    }
+    await window.ffmpeg.cancelGroupMerge()
   }
   return (
     <div className="w-full overflow-x-hidden">
@@ -175,7 +220,7 @@ const GroupPage = (): React.JSX.Element => {
                 {isPending ? '合并中' : '开始合并'}
               </Button>
 
-              <Button variant="outline">
+              <Button variant="outline" onClick={cancelMerge}>
                 <X className="size-4" />
                 取消
               </Button>
@@ -186,16 +231,37 @@ const GroupPage = (): React.JSX.Element => {
           <CardHeader>
             <CardTitle>分组列表</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              {group.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <span>{item.name}</span>
-                  <span className="text-xs text-muted-foreground">{item.files.length} 个文件</span>
-                  <span className="text-xs text-muted-foreground">{item.status}</span>
+          <CardContent className="space-y-2">
+            <ItemGroup className="gap-2">
+              {group.map((item, idx) => (
+                <div key={item.name}>
+                  <Item variant="outline" size="sm" className="justify-between">
+                    <ItemContent>
+                      <ItemHeader>
+                        <ItemTitle>
+                          <Video className="size-4 text-muted-foreground" />
+                          {item.name}
+                        </ItemTitle>
+                        <ItemActions>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                            {item.files.length} 个文件
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs inline-flex items-center gap-1 ${STATUS_MAP[item.status]?.cls || STATUS_MAP.ready.cls}`}
+                          >
+                            {item.status === 'start' || item.status === 'merging' ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : null}
+                            {STATUS_MAP[item.status]?.label || STATUS_MAP.ready.label}
+                          </span>
+                        </ItemActions>
+                      </ItemHeader>
+                    </ItemContent>
+                  </Item>
+                  {idx !== group.length - 1 ? <ItemSeparator /> : null}
                 </div>
               ))}
-            </div>
+            </ItemGroup>
           </CardContent>
         </Card>
       </div>

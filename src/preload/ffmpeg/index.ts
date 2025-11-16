@@ -201,6 +201,8 @@ export interface FfmpegApi {
   groupMergeStart(options: GroupMergeOptions): Promise<void>
   // 合并视频监听
   onGroupMergeStatus: (listener: (payload: GroupMergeStPayload) => void) => () => void
+  // 取消分组合并
+  cancelGroupMerge: () => Promise<void>
 }
 
 export const ffmpegApi: FfmpegApi = {
@@ -297,5 +299,7 @@ export const ffmpegApi: FfmpegApi = {
       listener(payload)
     ipcRenderer.on('videoGroup-status', handler)
     return () => ipcRenderer.removeListener('videoGroup-status', handler)
-  }
+  },
+  // 取消分组合并
+  cancelGroupMerge: () => ipcRenderer.invoke('videoGroup-cancel')
 }

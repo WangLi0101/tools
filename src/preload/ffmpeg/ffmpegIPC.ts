@@ -1,5 +1,5 @@
 import { app, ipcMain, BrowserWindow } from 'electron'
-import { spawn } from 'child_process'
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import http from 'http'
@@ -190,6 +190,17 @@ const runFfmpeg = async (
       }
     })
   })
+}
+
+// 分组合并
+const groupMerge: {
+  isCanceled: boolean
+  currentProc: ChildProcessWithoutNullStreams | null
+  currentGroup: string
+} = {
+  isCanceled: false,
+  currentProc: null,
+  currentGroup: ''
 }
 
 export const registerFfmpegIPC = (): void => {
@@ -1130,13 +1141,16 @@ export const registerFfmpegIPC = (): void => {
           '+faststart',
           outPath
         ])
+        groupMerge.currentProc = proc
         proc.on('close', (code) => {
           if (code === 0) resolve(true)
           else reject(new Error(`合并失败：退出码 ${code}`))
         })
       })
     }
+    groupMerge.isCanceled = false
     for (const g of group) {
+      if (groupMerge.isCanceled) break
       const { name, files } = g
       const outPath = path.join(outputDir, `${name}.mkv`)
       // 创建临时列表文件
@@ -1146,6 +1160,7 @@ export const registerFfmpegIPC = (): void => {
       await fs.promises.writeFile(listPath, listContent).catch(() => null)
       try {
         event.sender.send('videoGroup-status', { status: 'start', groupName: name })
+        groupMerge.currentGroup = name
         await merge(listPath, outPath)
         event.sender.send('videoGroup-status', { status: 'done', groupName: name })
       } catch (e) {
@@ -1156,6 +1171,22 @@ export const registerFfmpegIPC = (): void => {
         })
       } finally {
         await fs.promises.unlink(listPath).catch(() => null)
+      }
+    }
+  })
+
+  // 取消分组合并
+  ipcMain.handle('videoGroup-cancel', async (event) => {
+    groupMerge.isCanceled = true
+    if (groupMerge.currentProc) {
+      try {
+        groupMerge.currentProc.kill('SIGINT')
+        event.sender.send('videoGroup-status', {
+          status: 'canceled',
+          groupName: groupMerge.currentGroup
+        })
+      } finally {
+        groupMerge.currentProc = null
       }
     }
   })
