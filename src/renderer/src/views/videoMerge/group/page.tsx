@@ -2,7 +2,7 @@ import { FolderOpen, Play, X, Video, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Item,
   ItemActions,
@@ -25,16 +25,26 @@ const GroupPage = (): React.JSX.Element => {
     () => localStorage.getItem('group.outDir') || ''
   )
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
-  const [selectedFormats, setSelectedFormats] = useState<string[]>(() => {
+  const [selectedFormat, setSelectedFormat] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('group.formats')
-      if (saved) {
-        const arr = JSON.parse(saved)
-        if (Array.isArray(arr) && arr.length) return arr
+      const raw = localStorage.getItem('group.format') ?? localStorage.getItem('group.formats')
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed) && parsed.length) return String(parsed[0])
+          if (typeof parsed === 'string' && parsed) return parsed
+        } catch {
+          if (raw) return raw
+        }
       }
     } catch {}
-    return ['mp4']
+    return 'mp4'
   })
+  useEffect(() => {
+    try {
+      localStorage.setItem('group.format', selectedFormat)
+    } catch {}
+  }, [selectedFormat])
   const [group, setGroup] = useState<GroupItem[]>([])
 
   const STATUS_MAP = {
@@ -97,7 +107,7 @@ const GroupPage = (): React.JSX.Element => {
   const getFilesAndGroup = async (path: string): Promise<void> => {
     const res = await window.ffmpeg.scanVideoGruopFiles({
       inputDir: path,
-      formats: selectedFormats
+      formats: [selectedFormat]
     })
     groupAndMerge(res.files)
   }
@@ -183,7 +193,11 @@ const GroupPage = (): React.JSX.Element => {
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground mb-2">视频检索格式</p>
-                <div className="grid grid-cols-3 gap-2">
+                <RadioGroup
+                  value={selectedFormat}
+                  onValueChange={setSelectedFormat}
+                  className="grid grid-cols-3 gap-2"
+                >
                   {[
                     'mp4',
                     'm4v',
@@ -197,21 +211,12 @@ const GroupPage = (): React.JSX.Element => {
                     'flv',
                     'wmv'
                   ].map((fmt) => (
-                    <label key={fmt} className="flex items-center gap-2 text-xs">
-                      <Checkbox
-                        checked={selectedFormats.includes(fmt)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedFormats([...selectedFormats, fmt])
-                          } else {
-                            setSelectedFormats(selectedFormats.filter((f) => f !== fmt))
-                          }
-                        }}
-                      />
-                      <span>{fmt}</span>
-                    </label>
+                    <div key={fmt} className="flex items-center gap-2 text-xs">
+                      <RadioGroupItem value={fmt} id={`group-fmt-${fmt}`} />
+                      <label htmlFor={`group-fmt-${fmt}`}>{fmt}</label>
+                    </div>
                   ))}
-                </div>
+                </RadioGroup>
               </div>
             </div>
 

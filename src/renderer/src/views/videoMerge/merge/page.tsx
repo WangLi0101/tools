@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 
@@ -20,15 +21,20 @@ const Merge = () => {
   const [status, setStatus] = useState<string>('')
   const [outputPath, setOutputPath] = useState<string>('')
   const [total, setTotal] = useState<number>(0)
-  const [selectedFormats, setSelectedFormats] = useState<string[]>(() => {
+  const [selectedFormat, setSelectedFormat] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('merge.formats')
-      if (saved) {
-        const arr = JSON.parse(saved)
-        if (Array.isArray(arr) && arr.length) return arr
+      const raw = localStorage.getItem('merge.format') ?? localStorage.getItem('merge.formats')
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed) && parsed.length) return String(parsed[0])
+          if (typeof parsed === 'string' && parsed) return parsed
+        } catch {
+          if (raw) return raw
+        }
       }
     } catch {}
-    return ['mp4']
+    return 'mp4'
   })
   const [noProgress, setNoProgress] = useState<boolean>(() => {
     try {
@@ -126,14 +132,14 @@ const Merge = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('merge.formats', JSON.stringify(selectedFormats))
+      localStorage.setItem('merge.format', selectedFormat)
     } catch {}
-  }, [selectedFormats])
+  }, [selectedFormat])
 
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
   const canRun = useMemo(
-    () => !!inputDir && !!outputDir && selectedFormats.length > 0 && !running,
-    [inputDir, outputDir, selectedFormats.length, running]
+    () => !!inputDir && !!outputDir && !!selectedFormat && !running,
+    [inputDir, outputDir, selectedFormat, running]
   )
 
   const chooseInputDir = async (): Promise<void> => {
@@ -164,7 +170,7 @@ const Merge = () => {
     setRunning(true)
     setStatus('准备合并')
     setOutputPath('')
-    await window.ffmpeg.mergeVideos({ inputDir, outputDir, formats: selectedFormats, noProgress })
+    await window.ffmpeg.mergeVideos({ inputDir, outputDir, formats: [selectedFormat], noProgress })
   }
 
   const onCancel = async (): Promise<void> => {
@@ -216,7 +222,11 @@ const Merge = () => {
               </label>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground mb-2">视频检索格式</p>
-                <div className="grid grid-cols-3 gap-2">
+                <RadioGroup
+                  value={selectedFormat}
+                  onValueChange={setSelectedFormat}
+                  className="grid grid-cols-3 gap-2"
+                >
                   {[
                     'mp4',
                     'm4v',
@@ -230,20 +240,12 @@ const Merge = () => {
                     'flv',
                     'wmv'
                   ].map((fmt) => (
-                    <label key={fmt} className="flex items-center gap-2 text-xs">
-                      <Checkbox
-                        checked={selectedFormats.includes(fmt)}
-                        onCheckedChange={(checked) => {
-                          setSelectedFormats((prev) => {
-                            if (checked === true) return Array.from(new Set([...prev, fmt]))
-                            return prev.filter((x) => x !== fmt)
-                          })
-                        }}
-                      />
-                      <span>{fmt}</span>
-                    </label>
+                    <div key={fmt} className="flex items-center gap-2 text-xs">
+                      <RadioGroupItem value={fmt} id={`merge-fmt-${fmt}`} />
+                      <label htmlFor={`merge-fmt-${fmt}`}>{fmt}</label>
+                    </div>
                   ))}
-                </div>
+                </RadioGroup>
               </div>
             </div>
 
