@@ -12,7 +12,7 @@ interface ConvertImageResult {
   outputPath: string
 }
 interface ConvertImageStatus {
-  status: 'start' | 'progress' | 'done' | 'error'
+  status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
   progress?: number
   message?: string
   outputPath?: string
@@ -30,7 +30,7 @@ interface ConvertVideoResult {
   outputPath: string
 }
 interface ConvertVideoStatus {
-  status: 'start' | 'progress' | 'done' | 'error'
+  status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
   progress?: number
   message?: string
   outputPath?: string
@@ -45,7 +45,7 @@ interface ConvertAudioResult {
   outputPath: string
 }
 interface ConvertAudioStatus {
-  status: 'start' | 'progress' | 'done' | 'error'
+  status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
   progress?: number
   message?: string
   outputPath?: string
@@ -140,7 +140,7 @@ export interface GroupMergeOptions {
 }
 interface GroupMergeStPayload {
   groupName: string
-  status: 'start' | 'progress' | 'done' | 'error' | 'canceled'
+  status: 'start' | 'done' | 'error' | 'canceled'
 }
 export interface FfmpegApi {
   convertImage: (options: ConvertImageOptions) => Promise<ConvertImageResult>

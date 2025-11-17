@@ -1,6 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { Api } from 'Api'
-import type { FfmpegApi } from 'ffmpeg'
+import type { Api } from './api'
+import type { FfmpegApi } from './ffmpeg'
 import type { PlaywrightApi } from './playwright'
 declare global {
   interface Window {
