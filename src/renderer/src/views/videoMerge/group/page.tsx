@@ -1,8 +1,10 @@
 import { FolderOpen, Play, X, Video, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Input } from '@/components/ui/input'
+
 import {
   Item,
   ItemActions,
@@ -45,6 +47,23 @@ const GroupPage = (): React.JSX.Element => {
       localStorage.setItem('group.format', selectedFormat)
     } catch {}
   }, [selectedFormat])
+  const rule = 'regex'
+  const [regexText, setRegexText] = useState<string>(() => {
+    const v = localStorage.getItem('group.regex')
+    return v || '^(\\d{2})_(\\d{8})'
+  })
+  const [filesRaw, setFilesRaw] = useState<{ url: string; createTime: number }[]>([])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('group.rule', rule)
+    } catch {}
+  }, [])
+  useEffect(() => {
+    try {
+      localStorage.setItem('group.regex', regexText)
+    } catch {}
+  }, [regexText])
   const [group, setGroup] = useState<GroupItem[]>([])
 
   const STATUS_MAP = {
@@ -84,6 +103,7 @@ const GroupPage = (): React.JSX.Element => {
       statusCallBack()
     }
   }, [])
+
   // 选择输入文件夹
   const chooseInputDir = async (): Promise<void> => {
     const r = await window.api.selectDirectory()
@@ -103,33 +123,58 @@ const GroupPage = (): React.JSX.Element => {
     }
   }
 
-  // 获取文件并分组
-  const getFilesAndGroup = async (path: string): Promise<void> => {
-    const res = await window.ffmpeg.scanVideoGruopFiles({
-      inputDir: path,
-      formats: [selectedFormat]
-    })
-    groupAndMerge(res.files)
-  }
+  const groupAndMerge = useCallback(
+    (files: { url: string; createTime: number }[]) => {
+      const map = new Map<string, { url: string; createTime: number }[]>()
+      for (const f of files) {
+        let key = 'unknown'
+        const base = f.url.split(/[\\/]/).pop() || ''
+        try {
+          const re = new RegExp(regexText)
+          const m = base.match(re)
+          if (m) {
+            const groups = m.slice(1)
+            key = groups.length ? groups.join('_') : m[0]
+          } else {
+            key = 'unknown'
+          }
+        } catch {
+          key = 'unknown'
+        }
+        const list = map.get(key) || []
+        list.push({ url: f.url, createTime: f.createTime })
+        map.set(key, list)
+      }
+      const result: GroupItem[] = []
+      for (const [name, list] of map) {
+        const sorted = list.slice().sort((a, b) => a.createTime - b.createTime)
+        result.push({ name, files: sorted.map((x) => x.url), status: 'ready' })
+      }
+      result.sort((a, b) => a.name.localeCompare(b.name))
+      setGroup(result)
+    },
+    [regexText]
+  )
 
-  const groupAndMerge = (files: { url: string; createTime: number }[]) => {
-    const map = new Map<string, { url: string; createTime: number }[]>()
-    for (const f of files) {
-      const base = f.url.split(/[\\/]/).pop() || ''
-      const m = base.match(/^(\d{2})_(\d{8})/)
-      const key = m ? `${m[1]}_${m[2]}` : 'unknown'
-      const list = map.get(key) || []
-      list.push({ url: f.url, createTime: f.createTime })
-      map.set(key, list)
-    }
-    const result: GroupItem[] = []
-    for (const [name, list] of map) {
-      const sorted = list.slice().sort((a, b) => a.createTime - b.createTime)
-      result.push({ name, files: sorted.map((x) => x.url), status: 'ready' })
-    }
-    result.sort((a, b) => a.name.localeCompare(b.name))
-    setGroup(result)
-  }
+  const getFilesAndGroup = useCallback(
+    async (path: string): Promise<void> => {
+      const res = await window.ffmpeg.scanVideoGruopFiles({
+        inputDir: path,
+        formats: [selectedFormat]
+      })
+      setFilesRaw(res.files)
+      groupAndMerge(res.files)
+    },
+    [selectedFormat, groupAndMerge]
+  )
+
+  useEffect(() => {
+    if (inputDir) getFilesAndGroup(inputDir)
+  }, [selectedFormat, inputDir, getFilesAndGroup])
+
+  useEffect(() => {
+    if (filesRaw.length) groupAndMerge(filesRaw)
+  }, [regexText, filesRaw, groupAndMerge])
   // 开始合并
   const start = async () => {
     if (!outputDir) {
@@ -217,6 +262,15 @@ const GroupPage = (): React.JSX.Element => {
                     </div>
                   ))}
                 </RadioGroup>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground mb-2">分组规则（正则）</p>
+                <Input
+                  value={regexText}
+                  onChange={(e) => setRegexText(e.target.value)}
+                  placeholder="正则，如 ^(\\d{2})_(\\d{8})"
+                />
+                <div className="text-xs text-muted-foreground">修改正则会立即重新分组</div>
               </div>
             </div>
 

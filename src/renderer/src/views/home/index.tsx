@@ -71,7 +71,7 @@ const HomePage = (): React.JSX.Element => {
     },
     {
       title: 'PDF生成',
-      description: '支持生成PDF文件',
+      description: '支持网页生成PDF文件',
       Icon: FileDown,
       url: '/pdf',
       theme: 'amber'
