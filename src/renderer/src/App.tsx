@@ -13,7 +13,7 @@ function App(): React.JSX.Element {
             <RouterProvider router={router} />
           </div>
         </div>
-        <Toaster closeButton />
+        <Toaster closeButton richColors />
       </div>
     </ThemeProvider>
   )
