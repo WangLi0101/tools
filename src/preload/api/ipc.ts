@@ -137,6 +137,10 @@ export const registerIpc = () => {
     } catch {}
     return { totalBytes: 0, freeBytes: 0 }
   })
+  // 获取系统类型
+  ipcMain.handle('get-system-type', async () => {
+    return process.platform
+  })
   // 获取媒体源
   ipcMain.handle('get-media-source', async () => {
     const source = await desktopCapturer.getSources({

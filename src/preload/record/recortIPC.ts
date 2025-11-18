@@ -4,7 +4,7 @@ import path from 'path'
 export const registerRecordIPC = () => {
   let isStop = false
   let writeStream: WriteStream | null = null
-  ipcMain.handle('record-start', (event, outDir: string) => {
+  ipcMain.handle('record-start', (_, outDir: string) => {
     console.log('record-start', outDir)
     isStop = false
     const outPath = path.join(outDir, `${Date.now()}.webm`)
@@ -14,8 +14,7 @@ export const registerRecordIPC = () => {
     console.log('record-stop')
     isStop = true
   })
-  ipcMain.handle('record-push-data', (event, data: ArrayBuffer) => {
-    console.log('record-push-data', data)
+  ipcMain.handle('record-push-data', (_, data: ArrayBuffer) => {
     const readStream = Buffer.from(data)
     writeStream?.write(readStream)
     if (isStop) {

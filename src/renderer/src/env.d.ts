@@ -16,3 +16,11 @@ export interface ChromeDesktopVideoConstraints extends MediaTrackConstraints {
   }
   optional?: any[]
 }
+
+export interface ChromeDesktopAudioConstraints extends MediaTrackConstraints {
+  mandatory?: {
+    chromeMediaSource: 'desktop'
+    chromeMediaSourceId: string
+  }
+  optional?: any[]
+}

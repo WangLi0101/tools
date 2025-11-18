@@ -28,6 +28,8 @@ export interface Api {
       message?: string
     }) => void
   ) => () => void
+  // 获取系统类型
+  getSystemType: () => Promise<string>
   getMediaSource: () => Promise<Electron.DesktopCapturerSource[]>
 }
 
@@ -50,5 +52,6 @@ export const api: Api = {
     ipcRenderer.on('update-status', handler)
     return () => ipcRenderer.removeListener('update-status', handler)
   },
+  getSystemType: () => ipcRenderer.invoke('get-system-type'),
   getMediaSource: () => ipcRenderer.invoke('get-media-source')
 }

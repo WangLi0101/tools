@@ -8,10 +8,12 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { ChromeDesktopVideoConstraints } from '@/env'
+import { Switch } from '@/components/ui/switch'
+import { ChromeDesktopAudioConstraints, ChromeDesktopVideoConstraints } from '@/env'
+import { mergeVideoAndAudioStreams } from '@/utils'
 import { DesktopCapturerSource } from 'electron'
 import { FolderOpen, PlayCircle } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 const ScreenRecord = () => {
@@ -23,7 +25,17 @@ const ScreenRecord = () => {
   const [mediaId, setMediaId] = useState<string>('')
   const [isRecording, setIsRecording] = useState<boolean>(false)
   const [sec, setSec] = useState<number>(0)
+  const [frameRate, setFrameRate] = useState<number>(30)
+  const [isSystemAudio, setIsSystemAudio] = useState<boolean>(true)
+  const [isMacAudio, setIsMacAudio] = useState<boolean>(false)
+  const [isWindows, setIsWindows] = useState<boolean>(false)
+  const [audioDeviceList, setAudioDeviceList] = useState<MediaDeviceInfo[]>([])
+  const [audioDeviceId, setAudioDeviceId] = useState<string>('')
+  const videoStreamRef = useRef<MediaStream>(null)
+  const audioStreamRef = useRef<MediaStream>(null)
   const mediaRecorderRef = useRef<MediaRecorder>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  // 选择文件夹
   const chooseDir = async (): Promise<void> => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
@@ -34,13 +46,29 @@ const ScreenRecord = () => {
     }
   }
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
+  // 获取媒体资源
   const getMediaResource = async () => {
     const source = await window.api.getMediaSource()
     setMediaList(source)
   }
+  // 是否为mac系统
+  const getIsMac = async () => {
+    const res = await window.api.getSystemType()
+    setIsWindows(res === 'win32')
+  }
+  // 获取音频设备
+  const getAudioDevice = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const audioDevices = devices.filter((device) => device.kind === 'audioinput')
+    setAudioDeviceList(audioDevices)
+  }
   useEffect(() => {
+    getIsMac()
     getMediaResource()
+    getAudioDevice()
   }, [])
+
+  // 开始
   const start = async () => {
     if (!mediaId) {
       toast.error('请选择屏幕')
@@ -50,18 +78,21 @@ const ScreenRecord = () => {
       toast.error('请选择文件夹')
       return
     }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: mediaId
-        }
-      } as ChromeDesktopVideoConstraints
-    })
-
-    mediaRecorderRef.current = new MediaRecorder(stream, {
-      mimeType: 'video/webm; codecs=vp9'
+    if (isMacAudio && !audioDeviceId) {
+      toast.error('请选择音频设备')
+      return
+    }
+    let stream: MediaStream | null = null
+    if (isMacAudio) {
+      // 合并麦克风和系统声音流
+      await getAudioStream()
+      stream = mergeVideoAndAudioStreams(videoStreamRef.current!, audioStreamRef.current!)
+    } else {
+      stream = videoStreamRef.current
+    }
+    console.log('stream', stream)
+    mediaRecorderRef.current = new MediaRecorder(stream!, {
+      mimeType: 'video/webm; codecs=vp9,opus'
     })
 
     mediaRecorderRef.current.ondataavailable = async (e) => {
@@ -77,10 +108,13 @@ const ScreenRecord = () => {
     mediaRecorderRef.current.start(1 * 60 * 1000)
     setIsRecording(true)
   }
+
+  // 暂停
   const stop = async () => {
     mediaRecorderRef.current?.stop()
     setIsRecording(false)
   }
+  // 录制时间
   useEffect(() => {
     let timer: number | null = null
     if (isRecording) {
@@ -95,6 +129,48 @@ const ScreenRecord = () => {
       timer && clearInterval(timer)
     }
   }, [isRecording])
+
+  // 获取视频流
+  const getVideoStream = useCallback(async () => {
+    const containers: MediaStreamConstraints = {
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: mediaId,
+          maxFrameRate: frameRate
+        }
+      } as ChromeDesktopVideoConstraints
+    }
+    if (isSystemAudio) {
+      containers.audio = {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: mediaId
+        }
+      } as ChromeDesktopAudioConstraints
+    }
+    const stream = await navigator.mediaDevices.getUserMedia(containers)
+    videoStreamRef.current = stream
+    if (!videoRef.current) {
+      return
+    }
+    videoRef.current.srcObject = videoStreamRef.current
+  }, [mediaId, frameRate, isSystemAudio])
+
+  // 获取音频流
+  const getAudioStream = useCallback(async () => {
+    const res = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: audioDeviceId }
+    })
+    audioStreamRef.current = res
+  }, [audioDeviceId])
+
+  useEffect(() => {
+    if (mediaId) {
+      getVideoStream()
+    }
+  }, [mediaId, frameRate, getVideoStream])
+
   return (
     <div className="mx-auto  px-3 py-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -120,10 +196,10 @@ const ScreenRecord = () => {
             <div className="text-xs text-muted-foreground mt-2">
               可用空间：{fmtBytes(disk.free)} / 总空间：{fmtBytes(disk.total)}
             </div>
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">媒体源</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">媒体设备</label>
               <Select value={mediaId} onValueChange={(v) => setMediaId(v)}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[250px]">
                   <SelectValue placeholder="选择要录制的媒体源" />
                 </SelectTrigger>
                 <SelectContent>
@@ -134,6 +210,51 @@ const ScreenRecord = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">音频设备</label>
+              <Select value={audioDeviceId} onValueChange={(v) => setAudioDeviceId(v)}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="选择要录制的音频设备" />
+                </SelectTrigger>
+                <SelectContent>
+                  {audioDeviceList.map((f) => (
+                    <SelectItem key={f.deviceId} value={f.deviceId}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {isWindows && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-muted-foreground">录制系统音频</label>
+                <Switch checked={isSystemAudio} onCheckedChange={(v) => setIsSystemAudio(v)} />
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">录制Mac音频</label>
+              <Switch checked={isMacAudio} onCheckedChange={(v) => setIsMacAudio(v)} />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">帧率</label>
+              <Select value={frameRate.toString()} onValueChange={(v) => setFrameRate(Number(v))}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="选择要录制的帧率" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[30, 60, 90, 120].map((f) => (
+                    <SelectItem key={f} value={f.toString()}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">预览</label>
+              <video ref={videoRef} autoPlay muted className="w-full h-48 border border-border" />
             </div>
             <div className="operator flex items-center gap-2">
               <Button variant="default" size="sm" onClick={start} disabled={isRecording}>
