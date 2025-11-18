@@ -28,6 +28,7 @@ export interface Api {
       message?: string
     }) => void
   ) => () => void
+  getMediaSource: () => Promise<Electron.DesktopCapturerSource[]>
 }
 
 export const api: Api = {
@@ -48,5 +49,6 @@ export const api: Api = {
     const handler = (_event: Electron.IpcRendererEvent, payload: any) => listener(payload)
     ipcRenderer.on('update-status', handler)
     return () => ipcRenderer.removeListener('update-status', handler)
-  }
+  },
+  getMediaSource: () => ipcRenderer.invoke('get-media-source')
 }

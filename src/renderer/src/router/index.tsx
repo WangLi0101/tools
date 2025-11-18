@@ -13,6 +13,7 @@ import Pdf from '@/views/pdf'
 import VideoMergePage from '@/views/videoMerge/page'
 import Merge from '@/views/videoMerge/merge/page'
 import GroupPage from '@/views/videoMerge/group/page'
+import ScreenRecord from '@/views/screenRecord/page'
 
 export const router = createHashRouter([
   {
@@ -76,5 +77,9 @@ export const router = createHashRouter([
         element: <GroupPage />
       }
     ]
+  },
+  {
+    path: '/screenRecord',
+    element: <ScreenRecord />
   }
 ])

@@ -3,6 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { ffmpegApi } from './ffmpeg/index'
 import { api } from './api/index'
 import { playwrightApi } from './playwright'
+import { recordApi } from './record'
 
 // Custom APIs for renderer
 
@@ -15,6 +16,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('api', api)
     contextBridge.exposeInMainWorld('ffmpeg', ffmpegApi)
     contextBridge.exposeInMainWorld('playwright', playwrightApi)
+    contextBridge.exposeInMainWorld('record', recordApi)
   } catch (error) {
     console.error(error)
   }

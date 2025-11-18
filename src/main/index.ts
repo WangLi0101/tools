@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { registerFfmpegIPC } from '../preload/ffmpeg/ffmpegIPC'
 import { registerPlaywrightIPC } from '../preload/playwright/playwrightIPC'
 import { registerIpc } from '../preload/api/ipc'
+import { registerRecordIPC } from '../preload/record/recortIPC'
 
 function createWindow(): void {
   // Create the browser window.
@@ -60,6 +61,7 @@ app.whenReady().then(() => {
   registerIpc()
   registerFfmpegIPC()
   registerPlaywrightIPC()
+  registerRecordIPC()
 
   createWindow()
 

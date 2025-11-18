@@ -82,6 +82,13 @@ const HomePage = (): React.JSX.Element => {
       Icon: Video,
       url: '/videoMerge',
       theme: 'cyan'
+    },
+    {
+      title: '屏幕录制',
+      description: '支持屏幕录制',
+      Icon: PlayCircle,
+      url: '/screenRecord',
+      theme: 'violet'
     }
   ]
   const navigate = useNavigate()

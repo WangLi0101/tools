@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, desktopCapturer, dialog, ipcMain } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import fs from 'fs'
 import path from 'path'
@@ -136,5 +136,13 @@ export const registerIpc = () => {
       }
     } catch {}
     return { totalBytes: 0, freeBytes: 0 }
+  })
+  // 获取媒体源
+  ipcMain.handle('get-media-source', async () => {
+    const source = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 0, height: 0 }
+    })
+    return source
   })
 }
