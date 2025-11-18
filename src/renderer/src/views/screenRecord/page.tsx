@@ -291,7 +291,7 @@ const ScreenRecord = () => {
                 className="w-full h-48 border border-border"
               />
             </div>
-            <div className="operator flex items-center gap-2">
+            <div className="operator flex flex-col gap-2">
               <Button variant="default" size="sm" onClick={start} disabled={isRecording}>
                 {isRecording ? `正在录制 ${sec} 秒` : '开始录制'}
               </Button>
