@@ -262,7 +262,7 @@ const ScreenRecord = () => {
               </div>
             )}
             <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">录制Mac音频</label>
+              <label className="text-sm text-muted-foreground">录制Mic音频</label>
               <Switch checked={isMacAudio} onCheckedChange={(v) => setIsMacAudio(v)} />
             </div>
 
