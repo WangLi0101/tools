@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 
 import {
   Item,
@@ -11,7 +12,6 @@ import {
   ItemContent,
   ItemGroup,
   ItemHeader,
-  ItemSeparator,
   ItemTitle
 } from '@/components/ui/item'
 import { toast } from 'sonner'
@@ -19,6 +19,7 @@ interface GroupItem {
   name: string
   files: string[]
   status: 'ready' | 'start' | 'done' | 'error' | 'canceled' | 'merging'
+  selected: boolean
 }
 const GroupPage = (): React.JSX.Element => {
   const [isPending, setIsPending] = useState(false)
@@ -145,13 +146,23 @@ const GroupPage = (): React.JSX.Element => {
         list.push({ url: f.url, createTime: f.createTime })
         map.set(key, list)
       }
-      const result: GroupItem[] = []
+      const result: Omit<GroupItem, 'status' | 'selected'>[] = []
       for (const [name, list] of map) {
         const sorted = list.slice().sort((a, b) => a.createTime - b.createTime)
-        result.push({ name, files: sorted.map((x) => x.url), status: 'ready' })
+        result.push({ name, files: sorted.map((x) => x.url) })
       }
       result.sort((a, b) => a.name.localeCompare(b.name))
-      setGroup(result)
+      setGroup((prev) =>
+        result.map((item) => {
+          const old = prev.find((x) => x.name === item.name)
+          return {
+            name: item.name,
+            files: item.files,
+            status: old?.status ?? 'ready',
+            selected: old?.selected ?? true
+          }
+        })
+      )
     },
     [regexText]
   )
@@ -181,7 +192,8 @@ const GroupPage = (): React.JSX.Element => {
       toast.error('请选择输出文件夹')
       return
     }
-    if (!group.length) {
+    const selectedGroups = group.filter((g) => g.selected)
+    if (!selectedGroups.length) {
       toast.error('请先选择要合并的视频')
       return
     }
@@ -189,7 +201,7 @@ const GroupPage = (): React.JSX.Element => {
     try {
       await window.ffmpeg.groupMergeStart({
         outputDir,
-        group
+        group: selectedGroups.map((g) => ({ name: g.name, files: g.files }))
       })
       toast.success('合并完成')
     } catch {
@@ -293,12 +305,23 @@ const GroupPage = (): React.JSX.Element => {
           </CardHeader>
           <CardContent className="space-y-2">
             <ItemGroup className="gap-2">
-              {group.map((item, idx) => (
+              {group.map((item) => (
                 <div key={item.name}>
                   <Item variant="outline" size="sm" className="justify-between">
                     <ItemContent>
                       <ItemHeader>
                         <ItemTitle>
+                          <Checkbox
+                            checked={item.selected}
+                            onCheckedChange={(v) =>
+                              setGroup((prev) =>
+                                prev.map((x) =>
+                                  x.name === item.name ? { ...x, selected: !!v } : x
+                                )
+                              )
+                            }
+                            disabled={isPending}
+                          />
                           <Video className="size-4 text-muted-foreground" />
                           {item.name}
                         </ItemTitle>
@@ -318,7 +341,6 @@ const GroupPage = (): React.JSX.Element => {
                       </ItemHeader>
                     </ItemContent>
                   </Item>
-                  {idx !== group.length - 1 ? <ItemSeparator /> : null}
                 </div>
               ))}
             </ItemGroup>

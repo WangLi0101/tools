@@ -1146,11 +1146,13 @@ export const registerFfmpegIPC = (): void => {
           '+faststart',
           outPath
         ])
+
         groupMerge.currentProc = proc
         proc.on('close', (code) => {
           if (code === 0) resolve(true)
           else reject(new Error(`合并失败：退出码 ${code}`))
         })
+        proc.stderr.on('data', () => {})
       })
     }
     groupMerge.isCanceled = false
