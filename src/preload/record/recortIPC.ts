@@ -15,6 +15,7 @@ export const registerRecordIPC = () => {
     isStop = true
   })
   ipcMain.handle('record-push-data', (event, data: ArrayBuffer) => {
+    console.log('record-push-data', data)
     const readStream = Buffer.from(data)
     writeStream?.write(readStream)
     if (isStop) {

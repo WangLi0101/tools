@@ -5,3 +5,14 @@ declare global {
     path: string
   }
 }
+
+export interface ChromeDesktopVideoConstraints extends MediaTrackConstraints {
+  mandatory?: {
+    chromeMediaSource: 'desktop'
+    chromeMediaSourceId: string
+    maxWidth?: number
+    maxHeight?: number
+    maxFrameRate?: number
+  }
+  optional?: any[]
+}

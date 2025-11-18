@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { ChromeDesktopVideoConstraints } from '@/env'
 import { DesktopCapturerSource } from 'electron'
 import { FolderOpen, PlayCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -56,7 +57,7 @@ const ScreenRecord = () => {
           chromeMediaSource: 'desktop',
           chromeMediaSourceId: mediaId
         }
-      }
+      } as ChromeDesktopVideoConstraints
     })
 
     mediaRecorderRef.current = new MediaRecorder(stream, {
@@ -64,6 +65,7 @@ const ScreenRecord = () => {
     })
 
     mediaRecorderRef.current.ondataavailable = async (e) => {
+      console.log('ondataavailable', e.data)
       const arrayBuffer = await e.data.arrayBuffer()
       window.record.pushData(arrayBuffer)
     }
