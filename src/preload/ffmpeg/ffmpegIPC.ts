@@ -14,7 +14,12 @@ const m3u8Procs = new Map<string, any>()
 const m3u8States = new Map<string, 'running' | 'paused' | 'stopped'>()
 const IS_DEV = !app.isPackaged
 const getBin = (name: 'ffmpeg' | 'ffprobe'): string => {
-  if (process.platform === 'darwin') return name
+  if (process.platform === 'darwin') {
+    if (IS_DEV) {
+      return name
+    }
+    return path.join(process.resourcesPath, 'macFfmpeg', `${name}`)
+  }
   if (IS_DEV) {
     return path.join(app.getAppPath(), 'resources', 'bin', `${name}`)
   }

@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: tool.electron.app
 productName: desktop_tools
 directories:
   buildResources: build
@@ -12,6 +12,10 @@ files:
 extraResources:
   - from: resources/bin
     to: bin
+    filter:
+      - '**/*'
+  - from: resources/macFfmpeg
+    to: macFfmpeg
     filter:
       - '**/*'
 asarUnpack:

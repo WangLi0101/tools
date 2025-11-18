@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, globalShortcut } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -56,7 +56,10 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
+  // 注册全局快捷键 CommandOrControl+Shift+I 打开/关闭开发者工具
+  globalShortcut.register('CommandOrControl+Shift+I', () => {
+    BrowserWindow.getFocusedWindow()?.webContents.toggleDevTools()
+  })
   // IPC
   registerIpc()
   registerFfmpegIPC()

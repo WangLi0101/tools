@@ -26,7 +26,7 @@ const ScreenRecord = () => {
   const [isRecording, setIsRecording] = useState<boolean>(false)
   const [sec, setSec] = useState<number>(0)
   const [frameRate, setFrameRate] = useState<number>(30)
-  const [isSystemAudio, setIsSystemAudio] = useState<boolean>(true)
+  const [isSystemAudio, setIsSystemAudio] = useState<boolean>(false)
   const [isMacAudio, setIsMacAudio] = useState<boolean>(false)
   const [isWindows, setIsWindows] = useState<boolean>(false)
   const [audioDeviceList, setAudioDeviceList] = useState<MediaDeviceInfo[]>([])
@@ -82,6 +82,17 @@ const ScreenRecord = () => {
       toast.error('请选择音频设备')
       return
     }
+    if (!videoStreamRef.current) {
+      await getVideoStream()
+      if (!videoStreamRef.current) {
+        toast.error(
+          isWindows
+            ? '获取屏幕流失败，请检查权限'
+            : '系统未授予屏幕录制权限：系统设置 -> 隐私与安全 -> 屏幕录制，勾选本应用并重启后重试'
+        )
+        return
+      }
+    }
     let stream: MediaStream | null = null
     if (isMacAudio) {
       // 合并麦克风和系统声音流
@@ -132,30 +143,48 @@ const ScreenRecord = () => {
 
   // 获取视频流
   const getVideoStream = useCallback(async () => {
-    const containers: MediaStreamConstraints = {
-      video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: mediaId,
-          maxFrameRate: frameRate
-        }
-      } as ChromeDesktopVideoConstraints
+    try {
+      const containers: MediaStreamConstraints = {
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: mediaId,
+            maxFrameRate: frameRate
+          }
+        } as ChromeDesktopVideoConstraints
+      }
+      if (isSystemAudio) {
+        containers.audio = {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: mediaId
+          }
+        } as ChromeDesktopAudioConstraints
+      }
+      const stream = await navigator.mediaDevices.getUserMedia(containers)
+      videoStreamRef.current = stream
+    } catch (e: any) {
+      toast.error(
+        isWindows
+          ? `获取屏幕流失败：${e?.name || e}`
+          : '系统未授予屏幕录制权限：系统设置 -> 隐私与安全 -> 屏幕录制，勾选本应用并重启后重试'
+      )
+      try {
+        const fb = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate },
+          audio: isSystemAudio ? true : false
+        })
+        videoStreamRef.current = fb
+      } catch {}
     }
-    if (isSystemAudio) {
-      containers.audio = {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: mediaId
-        }
-      } as ChromeDesktopAudioConstraints
-    }
-    const stream = await navigator.mediaDevices.getUserMedia(containers)
-    videoStreamRef.current = stream
-    if (!videoRef.current) {
+    if (!videoRef.current || !videoStreamRef.current) {
       return
     }
     videoRef.current.srcObject = videoStreamRef.current
-  }, [mediaId, frameRate, isSystemAudio])
+    try {
+      await videoRef.current.play()
+    } catch {}
+  }, [mediaId, frameRate, isSystemAudio, isWindows])
 
   // 获取音频流
   const getAudioStream = useCallback(async () => {
@@ -254,7 +283,13 @@ const ScreenRecord = () => {
             </div>
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">预览</label>
-              <video ref={videoRef} autoPlay muted className="w-full h-48 border border-border" />
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-48 border border-border"
+              />
             </div>
             <div className="operator flex items-center gap-2">
               <Button variant="default" size="sm" onClick={start} disabled={isRecording}>
