@@ -1,5 +1,5 @@
-import { RouterProvider } from 'react-router-dom'
-import { router } from './router'
+import { HashRouter } from 'react-router-dom'
+import Router from './router/index'
 import { Toaster } from '@/components/ui/sonner'
 import Tool from './components/common/tool'
 import { ThemeProvider } from 'next-themes'
@@ -10,7 +10,9 @@ function App(): React.JSX.Element {
         <Tool />
         <div className="flex-1 overflow-auto p-3">
           <div className="min-h-full bg-card border border-input rounded-md">
-            <RouterProvider router={router} />
+            <HashRouter>
+              <Router />
+            </HashRouter>
           </div>
         </div>
         <Toaster closeButton richColors />

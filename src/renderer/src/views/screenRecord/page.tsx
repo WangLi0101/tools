@@ -1,4 +1,5 @@
 import GoHome from '@/components/common/goHome'
+import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -12,7 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { ChromeDesktopAudioConstraints, ChromeDesktopVideoConstraints } from '@/env'
 import { mergeVideoAndAudioStreams } from '@/utils'
 import { DesktopCapturerSource } from 'electron'
-import { FolderOpen, PlayCircle } from 'lucide-react'
+import { ScreenShare } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -201,10 +202,15 @@ const ScreenRecord = () => {
   }, [mediaId, frameRate, getVideoStream])
 
   return (
-    <div className="mx-auto  px-3 py-6 space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="mx-auto  px-3 py-6 space-y-4"
+    >
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-          <PlayCircle className="size-6 text-teal-600 dark:text-teal-400" />
+          <ScreenShare className="size-6 text-violet-600 dark:text-violet-400" />
           屏幕录制
         </h2>
         <GoHome />
@@ -217,7 +223,7 @@ const ScreenRecord = () => {
           <div className="flex flex-col  gap-3">
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={chooseDir}>
-                <FolderOpen className="size-4" />
+                <ScreenShare className="size-4" />
                 选择文件夹
               </Button>
               <span className="text-xs text-muted-foreground">{outDir || '未选择'}</span>
@@ -302,7 +308,7 @@ const ScreenRecord = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   )
 }
 export default ScreenRecord

@@ -1,9 +1,10 @@
 import * as React from 'react'
-import { FileCog, PlayCircle, FileSliders, FileDown, Video } from 'lucide-react'
+import { FileCog, PlayCircle, FileSliders, FileDown, Video, ScreenShare } from 'lucide-react'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { cn } from '@/lib/utils'
 import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
+import ScrollToTop from '@/components/common/scrollTop'
 const HomePage = (): React.JSX.Element => {
   const accents = {
     blue: {
@@ -86,7 +87,7 @@ const HomePage = (): React.JSX.Element => {
     {
       title: '屏幕录制',
       description: '支持屏幕录制',
-      Icon: PlayCircle,
+      Icon: ScreenShare,
       url: '/screenRecord',
       theme: 'violet'
     }
@@ -102,6 +103,7 @@ const HomePage = (): React.JSX.Element => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
+      <ScrollToTop />
       <div className="px-3 py-8">
         <div className="mb-5">
           <h1 className="text-xl font-semibold text-foreground">常用工具</h1>

@@ -1,4 +1,4 @@
-import { createHashRouter } from 'react-router-dom'
+import { useRoutes } from 'react-router-dom'
 import HomePage from '@/views/home'
 import FileTransformPage from '@/views/fileTransform'
 import VideoPage from '@/views/fileTransform/video/page'
@@ -14,8 +14,9 @@ import VideoMergePage from '@/views/videoMerge/page'
 import Merge from '@/views/videoMerge/merge/page'
 import GroupPage from '@/views/videoMerge/group/page'
 import ScreenRecord from '@/views/screenRecord/page'
+import ScrollToTop from '@/components/common/scrollTop'
 
-export const router = createHashRouter([
+const routeList = [
   {
     path: '/',
     element: <HomePage />
@@ -82,4 +83,15 @@ export const router = createHashRouter([
     path: '/screenRecord',
     element: <ScreenRecord />
   }
-])
+]
+
+const Router = () => {
+  const element = useRoutes(routeList)
+  return (
+    <>
+      <ScrollToTop />
+      {element}
+    </>
+  )
+}
+export default Router
