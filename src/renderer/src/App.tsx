@@ -6,10 +6,10 @@ import { ThemeProvider } from 'next-themes'
 function App(): React.JSX.Element {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <div className="h-screen flex flex-col overflow-auto bg-background">
+      <div className="min-h-screen flex flex-col bg-background">
         <Tool />
-        <div className="flex-1 overflow-auto p-3">
-          <div className="min-h-full bg-card border border-input rounded-md">
+        <div className="flex-1 overflow-auto px-4 sm:px-6 md:px-8 py-4">
+          <div className="min-h-full max-w-screen-2xl mx-auto bg-card/95 backdrop-blur-sm border border-input rounded-2xl shadow-sm transition-colors">
             <HashRouter>
               <Router />
             </HashRouter>

@@ -104,12 +104,12 @@ const HomePage = (): React.JSX.Element => {
       transition={{ duration: 0.25 }}
     >
       <ScrollToTop />
-      <div className="px-3 py-8">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 md:px-8 py-8">
         <div className="mb-5">
           <h1 className="text-xl font-semibold text-foreground">常用工具</h1>
           <p className="text-sm text-muted-foreground">快速开始你的文件处理</p>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
           {items.map((item, index) => {
             const accent = accents[item.theme as keyof typeof accents]
             const Icon = item.Icon

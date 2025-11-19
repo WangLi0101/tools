@@ -54,7 +54,7 @@ const Tool = (): React.JSX.Element => {
   }, [])
 
   return (
-    <div className="tool px-3 py-2  from-white/70 via-indigo-50/60 to-white/70 dark:from-muted/25 dark:via-muted/20 dark:to-muted/25 ring-1 ring-indigo-100/70 dark:ring-input shadow-sm flex items-center justify-between [-webkit-app-region:drag]">
+    <div className="tool px-4 py-2 border-b border-input bg-card/70 backdrop-blur-md flex items-center justify-between [-webkit-app-region:drag]">
       <div className="flex items-center gap-2 text-foreground">
         <FileCog className="size-5 text-primary" />
         <span className="text-sm font-medium">工具箱</span>
