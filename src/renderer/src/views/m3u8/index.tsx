@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
+import { useStorage } from '@/hooks/useStore'
 
 type TaskStatus = 'queued' | 'waiting' | 'downloading' | 'paused' | 'done' | 'error' | 'canceled'
 interface Task {
@@ -34,7 +35,7 @@ const M3u8 = (): React.JSX.Element => {
   const [text, setText] = useState('')
   const [concurrency, setConcurrency] = useState<number>(3)
   const [retry, setRetry] = useState<number>(2)
-  const [outDir, setOutDir] = useState<string>(() => localStorage.getItem('m3u8.outDir') || '')
+  const [outDir, setOutDir] = useStorage<string>('m3u8.outDir', '')
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
   const [tasks, setTasks] = useState<Task[]>([])
   const unsubRef = useRef<(() => void) | undefined>(undefined)
@@ -117,9 +118,6 @@ const M3u8 = (): React.JSX.Element => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
       setOutDir(r.path)
-      localStorage.setItem('m3u8.outDir', r.path)
-      const ds = await window.api.getDiskSpace(r.path)
-      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
     }
   }
 
@@ -146,6 +144,13 @@ const M3u8 = (): React.JSX.Element => {
     }
     setTasks([])
   }
+  useEffect(() => {
+    if (!outDir) return
+    ;(async () => {
+      const ds = await window.api.getDiskSpace(outDir)
+      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
+    })()
+  }, [outDir])
   useEffect(() => {
     const errs = tasks.filter((t) => t.status === 'error')
     if (errs.length) {

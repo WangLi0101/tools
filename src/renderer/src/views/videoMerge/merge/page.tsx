@@ -6,12 +6,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
+import { useStorage } from '@/hooks/useStore'
 
 const Merge = () => {
   const [inputDir, setInputDir] = useState<string>('')
-  const [outputDir, setOutputDir] = useState<string>(
-    () => localStorage.getItem('merge.outDir') || ''
-  )
+  const [outputDir, setOutputDir] = useStorage<string>('merge.outDir', '')
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
   const [progress, setProgress] = useState<number | undefined>(undefined)
   const [scanProgress, setScanProgress] = useState<number | undefined>(undefined)
@@ -21,7 +20,7 @@ const Merge = () => {
   const [status, setStatus] = useState<string>('')
   const [outputPath, setOutputPath] = useState<string>('')
   const [total, setTotal] = useState<number>(0)
-  const [selectedFormat, setSelectedFormat] = useState<string>(() => {
+  const defaultSelectedFormat = (() => {
     try {
       const raw = localStorage.getItem('merge.format') ?? localStorage.getItem('merge.formats')
       if (raw) {
@@ -35,14 +34,12 @@ const Merge = () => {
       }
     } catch {}
     return 'mp4'
-  })
-  const [noProgress, setNoProgress] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('merge.noProgress')
-      if (saved) return saved === '1'
-    } catch {}
-    return false
-  })
+  })()
+  const [selectedFormat, setSelectedFormat] = useStorage<string>(
+    'merge.format',
+    defaultSelectedFormat
+  )
+  const [noProgress, setNoProgress] = useStorage<boolean>('merge.noProgress', false)
   const [hideProgressRun, setHideProgressRun] = useState<boolean>(false)
   const [infoLines, setInfoLines] = useState<string[]>([])
 
@@ -130,12 +127,6 @@ const Merge = () => {
     }
   }, [infoLines])
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('merge.format', selectedFormat)
-    } catch {}
-  }, [selectedFormat])
-
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
   const canRun = useMemo(
     () => !!inputDir && !!outputDir && !!selectedFormat && !running,
@@ -152,12 +143,15 @@ const Merge = () => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
       setOutputDir(r.path)
-      localStorage.setItem('merge.outDir', r.path)
-      const ds = await window.api.getDiskSpace(r.path)
-      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
     }
   }
-
+  useEffect(() => {
+    if (!outputDir) return
+    ;(async () => {
+      const ds = await window.api.getDiskSpace(outputDir)
+      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
+    })()
+  }, [outputDir])
   const onStart = async (): Promise<void> => {
     if (!inputDir) {
       toast.error('请选择输入文件夹')
@@ -210,13 +204,7 @@ const Merge = () => {
               <label className="flex items-center gap-2 text-xs">
                 <Checkbox
                   checked={noProgress}
-                  onCheckedChange={(checked) => {
-                    const v = checked === true
-                    setNoProgress(v)
-                    try {
-                      localStorage.setItem('merge.noProgress', v ? '1' : '0')
-                    } catch {}
-                  }}
+                  onCheckedChange={(checked) => setNoProgress(checked === true)}
                 />
                 <span>不显示进度（不扫描，更快）</span>
               </label>

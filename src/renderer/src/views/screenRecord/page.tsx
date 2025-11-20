@@ -16,11 +16,10 @@ import { DesktopCapturerSource } from 'electron'
 import { ScreenShare } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useStorage } from '@/hooks/useStore'
 
 const ScreenRecord = () => {
-  const [outDir, setOutDir] = useState<string>(
-    () => localStorage.getItem('screenRecord.outDir') || ''
-  )
+  const [outDir, setOutDir] = useStorage<string>('screenRecord.outDir', '')
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
   const [mediaList, setMediaList] = useState<DesktopCapturerSource[]>([])
   const [mediaId, setMediaId] = useState<string>('')
@@ -41,12 +40,16 @@ const ScreenRecord = () => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
       setOutDir(r.path)
-      localStorage.setItem('screenRecord.outDir', r.path)
-      const ds = await window.api.getDiskSpace(r.path)
-      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
     }
   }
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
+  useEffect(() => {
+    if (!outDir) return
+    ;(async () => {
+      const ds = await window.api.getDiskSpace(outDir)
+      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
+    })()
+  }, [outDir])
   // 获取媒体资源
   const getMediaResource = async () => {
     const source = await window.api.getMediaSource()

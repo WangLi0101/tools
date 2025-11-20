@@ -15,6 +15,7 @@ import {
   ItemTitle
 } from '@/components/ui/item'
 import { toast } from 'sonner'
+import { useStorage } from '@/hooks/useStore'
 interface GroupItem {
   name: string
   files: string[]
@@ -24,11 +25,9 @@ interface GroupItem {
 const GroupPage = (): React.JSX.Element => {
   const [isPending, setIsPending] = useState(false)
   const [inputDir, setInputDir] = useState<string>('')
-  const [outputDir, setOutputDir] = useState<string>(
-    () => localStorage.getItem('group.outDir') || ''
-  )
+  const [outputDir, setOutputDir] = useStorage<string>('group.outDir', '')
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
-  const [selectedFormat, setSelectedFormat] = useState<string>(() => {
+  const defaultSelectedFormat = (() => {
     try {
       const raw = localStorage.getItem('group.format') ?? localStorage.getItem('group.formats')
       if (raw) {
@@ -42,17 +41,13 @@ const GroupPage = (): React.JSX.Element => {
       }
     } catch {}
     return 'mp4'
-  })
-  useEffect(() => {
-    try {
-      localStorage.setItem('group.format', selectedFormat)
-    } catch {}
-  }, [selectedFormat])
+  })()
+  const [selectedFormat, setSelectedFormat] = useStorage<string>(
+    'group.format',
+    defaultSelectedFormat
+  )
   const rule = 'regex'
-  const [regexText, setRegexText] = useState<string>(() => {
-    const v = localStorage.getItem('group.regex')
-    return v || '^(\\d{2})_(\\d{8})'
-  })
+  const [regexText, setRegexText] = useStorage<string>('group.regex', '^(\\d{2})_(\\d{8})')
   const [filesRaw, setFilesRaw] = useState<{ url: string; createTime: number }[]>([])
 
   useEffect(() => {
@@ -60,11 +55,6 @@ const GroupPage = (): React.JSX.Element => {
       localStorage.setItem('group.rule', rule)
     } catch {}
   }, [])
-  useEffect(() => {
-    try {
-      localStorage.setItem('group.regex', regexText)
-    } catch {}
-  }, [regexText])
   const [group, setGroup] = useState<GroupItem[]>([])
 
   const STATUS_MAP = {
@@ -118,11 +108,15 @@ const GroupPage = (): React.JSX.Element => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
       setOutputDir(r.path)
-      localStorage.setItem('group.outDir', r.path)
-      const ds = await window.api.getDiskSpace(r.path)
-      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
     }
   }
+  useEffect(() => {
+    if (!outputDir) return
+    ;(async () => {
+      const ds = await window.api.getDiskSpace(outputDir)
+      setDisk({ total: ds.totalBytes, free: ds.freeBytes })
+    })()
+  }, [outputDir])
 
   const groupAndMerge = useCallback(
     (files: { url: string; createTime: number }[]) => {
