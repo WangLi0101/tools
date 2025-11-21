@@ -191,7 +191,7 @@ const HomePage = (): React.JSX.Element => {
               >
                 <div className="mb-6 flex items-center gap-3">
                   <div className="h-8 w-1 rounded-full bg-primary/50" />
-                  <h2 className="text-2xl font-bold tracking-tight text-foreground/90">
+                  <h2 className="text-xl font-bold tracking-tight text-foreground/90">
                     {section.title}
                   </h2>
                   <span className="text-sm text-muted-foreground ml-2 border-l pl-3 border-border/50">
@@ -265,7 +265,7 @@ const HomePage = (): React.JSX.Element => {
         {/* Footer Note */}
         <div className="mt-10 text-center">
           <p className="text-xs text-muted-foreground/50">
-            © 2024 Desktop Tools. Designed for productivity.
+            © 2025 Desktop Tools. Designed for productivity.
           </p>
         </div>
       </motion.div>
