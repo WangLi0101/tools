@@ -15,7 +15,7 @@ const MyTabs = ({ tabs }: Props): React.JSX.Element => {
   }
   return (
     <Tabs defaultValue={tabs[0].value} onValueChange={(v) => go(v)}>
-      <TabsList className="rounded-full w-full">
+      <TabsList className="rounded-full w-full bg-zinc-100 dark:bg-zinc-800 border">
         {tabs.map((item) => (
           <TabsTrigger value={item.value} key={item.value}>
             {item.icon}

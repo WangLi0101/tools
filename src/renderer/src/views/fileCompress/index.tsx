@@ -29,7 +29,7 @@ const FileCompressPage = (): React.JSX.Element => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      <div className="mx-auto max-w-3xl  space-y-4">
+      <div className="mx-auto max-w-5xl  space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
             <FileCog className="size-6 text-rose-600 dark:text-rose-400" />

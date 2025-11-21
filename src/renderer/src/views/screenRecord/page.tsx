@@ -222,7 +222,7 @@ const ScreenRecord = () => {
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2 }}
-      className="w-full h-full space-y-6"
+      className="w-full h-full space-y-6 mx-auto max-w-5xl"
     >
       <div className="flex items-center justify-between">
         <div>

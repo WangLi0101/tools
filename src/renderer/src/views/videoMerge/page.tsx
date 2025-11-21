@@ -17,7 +17,7 @@ const VideoMergePage = (): React.JSX.Element => {
     }
   ]
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full max-w-5xl mx-auto overflow-x-hidden">
       <div className="mx-auto  space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">

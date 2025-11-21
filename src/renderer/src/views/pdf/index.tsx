@@ -70,7 +70,7 @@ const Pdf = (): React.JSX.Element => {
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2 }}
-      className="w-full h-full space-y-6"
+      className="w-full h-full space-y-6 mx-auto max-w-5xl"
     >
       <div className="flex items-center justify-between">
         <div>
@@ -85,7 +85,7 @@ const Pdf = (): React.JSX.Element => {
         <GoHome />
       </div>
 
-      <Card className="max-w-3xl shadow-sm">
+      <Card className="max-w-5xl shadow-sm">
         <CardHeader className="pb-3 border-b bg-muted/20">
           <CardTitle className="text-base flex items-center gap-2">
             <FileText className="size-4" />
