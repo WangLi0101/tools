@@ -1,5 +1,3 @@
-import GoHome from '@/components/common/goHome'
-import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -10,13 +8,27 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
 import { ChromeDesktopAudioConstraints, ChromeDesktopVideoConstraints } from '@/env'
 import { mergeVideoAndAudioStreams } from '@/utils'
 import { DesktopCapturerSource } from 'electron'
-import { ScreenShare } from 'lucide-react'
+import {
+  ScreenShare,
+  FolderOutput,
+  Settings2,
+  Monitor,
+  Mic,
+  Video as VideoIcon,
+  Circle,
+  Square,
+  Clock,
+  Speaker
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStorage } from '@/hooks/useStore'
+import { cn } from '@/lib/utils'
+import GoHome from '@/components/common/goHome'
 
 const ScreenRecord = () => {
   const [outDir, setOutDir] = useStorage<string>('screenRecord.outDir', '')
@@ -205,113 +217,231 @@ const ScreenRecord = () => {
   }, [mediaId, frameRate, getVideoStream])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="mx-auto  px-3 py-6 space-y-4"
-    >
+    <div className="w-full h-full space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-          <ScreenShare className="size-6 text-violet-600 dark:text-violet-400" />
-          屏幕录制
-        </h2>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <ScreenShare className="size-6 text-primary" />
+            屏幕录制
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">录制屏幕、系统音频及麦克风声音</p>
+        </div>
         <GoHome />
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>屏幕录制</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col  gap-3">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={chooseDir}>
-                <ScreenShare className="size-4" />
-                选择文件夹
-              </Button>
-              <span className="text-xs text-muted-foreground">{outDir || '未选择'}</span>
-            </div>
-            <div className="text-xs text-muted-foreground mt-2">
-              可用空间：{fmtBytes(disk.free)} / 总空间：{fmtBytes(disk.total)}
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">媒体设备</label>
-              <Select value={mediaId} onValueChange={(v) => setMediaId(v)}>
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="选择要录制的媒体源" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mediaList.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {f.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">音频设备</label>
-              <Select value={audioDeviceId} onValueChange={(v) => setAudioDeviceId(v)}>
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="选择要录制的音频设备" />
-                </SelectTrigger>
-                <SelectContent>
-                  {audioDeviceList.map((f) => (
-                    <SelectItem key={f.deviceId} value={f.deviceId}>
-                      {f.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {isWindows && (
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">录制系统音频</label>
-                <Switch checked={isSystemAudio} onCheckedChange={(v) => setIsSystemAudio(v)} />
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">录制Mic音频</label>
-              <Switch checked={isMacAudio} onCheckedChange={(v) => setIsMacAudio(v)} />
-            </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">帧率</label>
-              <Select value={frameRate.toString()} onValueChange={(v) => setFrameRate(Number(v))}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="选择要录制的帧率" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[30, 60, 90, 120].map((f) => (
-                    <SelectItem key={f} value={f.toString()}>
-                      {f}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Settings */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings2 className="size-4" />
+                录制设置
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Output Directory */}
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground font-normal">存储位置</label>
+                <div
+                  className={cn(
+                    'relative group cursor-pointer rounded-lg border border-dashed p-3 transition-colors hover:bg-accent/50',
+                    !outDir && 'bg-accent/20'
+                  )}
+                  onClick={chooseDir}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-full border shadow-sm group-hover:scale-105 transition-transform">
+                      <FolderOutput className="size-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-none">输出文件夹</p>
+                      <p className="text-xs text-muted-foreground truncate" title={outDir}>
+                        {outDir || '点击选择...'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground">
+                    可用: {fmtBytes(disk.free)}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Video Source */}
+              <div className="space-y-3">
+                <label className="text-xs text-muted-foreground font-normal flex items-center gap-2">
+                  <Monitor className="size-3" />
+                  视频源
+                </label>
+                <Select value={mediaId} onValueChange={setMediaId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择屏幕或窗口" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mediaList.map((f) => (
+                      <SelectItem key={f.id} value={f.id} className="text-sm">
+                        <span className="truncate block max-w-[200px]" title={f.name}>
+                          {f.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Audio Source */}
+              <div className="space-y-3">
+                <label className="text-xs text-muted-foreground font-normal flex items-center gap-2">
+                  <Mic className="size-3" />
+                  麦克风
+                </label>
+                <Select value={audioDeviceId} onValueChange={setAudioDeviceId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择麦克风设备" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {audioDeviceList.map((f) => (
+                      <SelectItem key={f.deviceId} value={f.deviceId} className="text-sm">
+                        <span className="truncate block max-w-[200px]" title={f.label}>
+                          {f.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Frame Rate */}
+              <div className="space-y-3">
+                <label className="text-xs text-muted-foreground font-normal flex items-center gap-2">
+                  <VideoIcon className="size-3" />
+                  帧率设置
+                </label>
+                <Select value={frameRate.toString()} onValueChange={(v) => setFrameRate(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择帧率" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[30, 60, 90, 120].map((f) => (
+                      <SelectItem key={f} value={f.toString()}>
+                        {f} FPS
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              {/* Toggles */}
+              <div className="space-y-4">
+                {isWindows && (
+                  <div className="flex items-center justify-between">
+                    <label
+                      className="text-sm font-normal flex items-center gap-2 cursor-pointer"
+                      htmlFor="sys-audio"
+                    >
+                      <Speaker className="size-4 text-muted-foreground" />
+                      录制系统音频
+                    </label>
+                    <Switch
+                      id="sys-audio"
+                      checked={isSystemAudio}
+                      onCheckedChange={setIsSystemAudio}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <label
+                    className="text-sm font-normal flex items-center gap-2 cursor-pointer"
+                    htmlFor="mic-audio"
+                  >
+                    <Mic className="size-4 text-muted-foreground" />
+                    录制麦克风
+                  </label>
+                  <Switch id="mic-audio" checked={isMacAudio} onCheckedChange={setIsMacAudio} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Preview & Control */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="shadow-sm h-full flex flex-col overflow-hidden">
+            <CardHeader className="pb-3 border-b bg-muted/20 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base flex items-center gap-2">
+                <VideoIcon className="size-4" />
+                实时预览
+              </CardTitle>
+              {isRecording && (
+                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80 animate-pulse gap-1">
+                  <Circle className="size-2 fill-current" />
+                  REC {sec}s
+                </span>
+              )}
+            </CardHeader>
+            <CardContent className="flex-1 p-0 relative bg-black/90 flex items-center justify-center min-h-[400px]">
+              {!mediaId ? (
+                <div className="text-muted-foreground flex flex-col items-center gap-3">
+                  <ScreenShare className="size-12 opacity-50" />
+                  <p>请在左侧选择视频源开始预览</p>
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-contain"
+                />
+              )}
+            </CardContent>
+
+            {/* Control Bar */}
+            <div className="p-4 border-t bg-background">
+              <div className="flex items-center justify-center gap-4">
+                {!isRecording ? (
+                  <Button
+                    size="lg"
+                    className="w-40 gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/20"
+                    onClick={start}
+                    disabled={!mediaId || !outDir}
+                  >
+                    <Circle className="size-4 fill-current" />
+                    开始录制
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    variant="destructive"
+                    className="w-40 gap-2 shadow-lg shadow-red-900/20"
+                    onClick={stop}
+                  >
+                    <Square className="size-4 fill-current" />
+                    停止录制
+                  </Button>
+                )}
+
+                {isRecording && (
+                  <div className="absolute right-6 flex items-center gap-2 text-sm font-mono text-muted-foreground bg-muted/50 px-3 py-1 rounded-md">
+                    <Clock className="size-4" />
+                    <span>
+                      {Math.floor(sec / 60)
+                        .toString()
+                        .padStart(2, '0')}
+                      :{(sec % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">预览</label>
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-48 border border-border"
-              />
-            </div>
-            <div className="operator flex flex-col gap-2">
-              <Button variant="default" size="sm" onClick={start} disabled={isRecording}>
-                {isRecording ? `正在录制 ${sec} 秒` : '开始录制'}
-              </Button>
-              <Button variant="destructive" size="sm" onClick={stop} disabled={!isRecording}>
-                停止录制
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+          </Card>
+        </div>
+      </div>
+    </div>
   )
 }
 export default ScreenRecord
