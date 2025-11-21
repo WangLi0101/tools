@@ -12,8 +12,6 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 450,
     height: 660,
-    resizable: false, // 禁止调整窗口大小
-    maximizable: false, // 禁止最大化
     frame: false, // Add this line to remove the default frame
     show: false,
     autoHideMenuBar: true,
