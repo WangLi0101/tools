@@ -3,7 +3,6 @@ import Uploader from '@/components/common/uploader'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import { Download, Video, Upload, Settings2, Zap, Loader2, X, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
@@ -14,6 +13,7 @@ import {
   SelectContent,
   SelectItem
 } from '@/components/ui/select'
+import { Progress } from '@/components/ui/progress'
 
 type VideoFormat = 'mp4' | 'webm' | 'mov' | 'mkv'
 
@@ -31,7 +31,7 @@ const VideoPage = (): React.JSX.Element => {
   const [running, setRunning] = useState(false)
   const [status, setStatus] = useState<string>('')
   const [outputPath, setOutputPath] = useState<string>('')
-  const [progress, setProgress] = useState<number | undefined>(undefined)
+  const [progress, setProgress] = useState<number>(0)
 
   const unsubscribeRef = useRef<null | (() => void)>(null)
 
@@ -43,7 +43,13 @@ const VideoPage = (): React.JSX.Element => {
         setStatus('开始转换...')
         setProgress(0)
       } else if (payload.status === 'progress') {
-        setStatus(payload.message ?? '')
+        if (payload.speed && payload.bitrate) {
+          setStatus(`转换中... ${payload.speed} ${payload.bitrate}`)
+        } else if (payload.message?.includes('frame=')) {
+          setStatus('转换中...')
+        } else {
+          setStatus(payload.message ?? '')
+        }
         setProgress((p) => (typeof payload.progress === 'number' ? payload.progress : p))
       } else if (payload.status === 'done') {
         setRunning(false)
@@ -54,12 +60,12 @@ const VideoPage = (): React.JSX.Element => {
       } else if (payload.status === 'canceled') {
         setRunning(false)
         setStatus('已取消')
-        setProgress(undefined)
+        setProgress(0)
         toast.info('已取消')
       } else if (payload.status === 'error') {
         setRunning(false)
         setStatus(payload.message ?? '转换失败')
-        setProgress(undefined)
+        setProgress(0)
         toast.error(`转换失败：${payload.message ?? ''}`)
       }
     })

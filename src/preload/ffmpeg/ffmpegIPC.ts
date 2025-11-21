@@ -163,6 +163,7 @@ const runFfmpeg = async (
   return new Promise<void>((resolve, reject) => {
     const proc = spawn(FFMPEG_CMD, args)
     if (onSpawn) onSpawn(proc)
+
     proc.stderr.on('data', (data) => {
       const line = String(data)
       let progress: number | undefined
@@ -171,7 +172,11 @@ const runFfmpeg = async (
         const pct = Math.min(99, ((baseSec + t) / durationSec) * 100)
         progress = Number(pct.toFixed(1))
       }
+      const speed = line.match(/speed=\s*([\d.]+x)/)?.[1]
+      const bitrate = line.match(/bitrate=\s*([\d.]+kbits\/s)/)?.[1]
       const payload: any = { status: 'progress', message: line }
+      if (speed) payload.speed = speed
+      if (bitrate) payload.bitrate = bitrate
       if (typeof progress === 'number') payload.progress = progress
       event.sender.send(channel, payload)
     })
@@ -1166,7 +1171,7 @@ export const registerFfmpegIPC = (): void => {
       await fs.promises.unlink(listPath).catch(() => null)
       await fs.promises.writeFile(listPath, listContent).catch(() => null)
       try {
-        event.sender.send('videoGroup-status', { status: 'start', groupName: name })
+        event.sender.send('videoGroup-status', { status: 'merging', groupName: name })
         groupMerge.currentGroup = name
         await merge(listPath, outPath)
         event.sender.send('videoGroup-status', { status: 'done', groupName: name })

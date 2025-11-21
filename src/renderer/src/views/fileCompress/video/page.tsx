@@ -54,7 +54,13 @@ const CompressVideoPage = (): React.JSX.Element => {
         setStatus('开始压缩...')
         setProgress(0)
       } else if (payload.status === 'progress') {
-        setStatus(payload.message ?? '')
+        if (payload.speed && payload.bitrate) {
+          setStatus(`压缩中... ${payload.speed} ${payload.bitrate}`)
+        } else if (payload.message?.includes('frame=')) {
+          setStatus('压缩中...')
+        } else {
+          setStatus(payload.message ?? '')
+        }
         setProgress((p) => (typeof payload.progress === 'number' ? payload.progress : p))
       } else if (payload.status === 'done') {
         setRunning(false)

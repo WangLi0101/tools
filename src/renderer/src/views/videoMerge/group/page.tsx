@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils'
 interface GroupItem {
   name: string
   files: string[]
-  status: 'ready' | 'start' | 'done' | 'error' | 'canceled' | 'merging'
+  status: 'ready' | 'done' | 'error' | 'canceled' | 'merging'
   selected: boolean
 }
 
@@ -453,7 +453,7 @@ const GroupPage = (): React.JSX.Element => {
                               STATUS_MAP[item.status]?.cls || STATUS_MAP.ready.cls
                             )}
                           >
-                            {item.status === 'start' || item.status === 'merging' ? (
+                            {item.status === 'merging' ? (
                               <Loader2 className="size-3 animate-spin" />
                             ) : STATUS_MAP[item.status].icon ? (
                               createElement(STATUS_MAP[item.status].icon!, { className: 'size-3' })

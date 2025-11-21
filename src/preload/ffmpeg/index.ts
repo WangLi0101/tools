@@ -16,6 +16,8 @@ interface ConvertImageStatus {
   progress?: number
   message?: string
   outputPath?: string
+  speed?: string
+  bitrate?: string
 }
 type VideoFormat = 'mp4' | 'webm' | 'mov' | 'mkv'
 interface ConvertVideoOptions {
@@ -34,6 +36,8 @@ interface ConvertVideoStatus {
   progress?: number
   message?: string
   outputPath?: string
+  speed?: string
+  bitrate?: string
 }
 type AudioFormat = 'mp3' | 'aac' | 'wav' | 'flac' | 'ogg'
 interface ConvertAudioOptions {
@@ -49,6 +53,8 @@ interface ConvertAudioStatus {
   progress?: number
   message?: string
   outputPath?: string
+  speed?: string
+  bitrate?: string
 }
 
 type CompressImageFormat = 'jpg' | 'png' | 'webp'
@@ -67,6 +73,8 @@ interface CompressImageStatus {
   progress?: number
   message?: string
   outputPath?: string
+  speed?: string
+  bitrate?: string
 }
 
 type CompressVideoFormat = 'mp4' | 'webm'
@@ -96,6 +104,8 @@ interface CompressVideoStatus {
   progress?: number
   message?: string
   outputPath?: string
+  speed?: string
+  bitrate?: string
 }
 
 type CompressAudioFormat = 'mp3' | 'aac' | 'ogg'
@@ -112,6 +122,8 @@ interface CompressAudioStatus {
   progress?: number
   message?: string
   outputPath?: string
+  speed?: string
+  bitrate?: string
 }
 
 interface M3u8TaskOptions {
@@ -140,7 +152,7 @@ export interface GroupMergeOptions {
 }
 interface GroupMergeStPayload {
   groupName: string
-  status: 'start' | 'done' | 'error' | 'canceled'
+  status: 'merging' | 'done' | 'error' | 'canceled'
 }
 export interface FfmpegApi {
   convertImage: (options: ConvertImageOptions) => Promise<ConvertImageResult>
