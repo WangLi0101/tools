@@ -24,7 +24,7 @@ const VideoMergePage = (): React.JSX.Element => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 space-y-4">
+      <div className="mx-auto  space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
             <Video className="size-6 text-cyan-600 dark:text-cyan-400" />

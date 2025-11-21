@@ -25,9 +25,8 @@ const FileTransformPage = (): React.JSX.Element => {
 
   return (
     <div className="w-full relative">
-   
       <motion.div
-        className="container mx-auto px-4 py-8 max-w-6xl"
+        className="container mx-auto max-w-6xl"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
@@ -54,7 +53,6 @@ const FileTransformPage = (): React.JSX.Element => {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-            
             >
               <Outlet />
             </motion.div>

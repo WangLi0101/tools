@@ -125,13 +125,13 @@ const HomePage = (): React.JSX.Element => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background selection:bg-primary/10">
+    <div className="w-full selection:bg-primary/10">
       <ScrollToTop />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 max-w-7xl"
+        className="container mx-auto px-4"
       >
         {/* Hero Section */}
         <div className="mb-16 text-center relative">
@@ -225,7 +225,7 @@ const HomePage = (): React.JSX.Element => {
         </div>
 
         {/* Footer Note */}
-        <div className="mt-16 text-center">
+        <div className="mt-10 text-center">
           <p className="text-xs text-muted-foreground/50">
             © 2024 Desktop Tools. Designed for productivity.
           </p>

@@ -235,7 +235,7 @@ const M3u8 = (): React.JSX.Element => {
 
   return (
     <motion.div
-      className="w-full overflow-x-hidden p-5"
+      className="w-full overflow-x-hidden "
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
