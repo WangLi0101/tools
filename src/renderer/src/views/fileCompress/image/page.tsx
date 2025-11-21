@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Progress } from '@/components/ui/progress'
-import { Download } from 'lucide-react'
+import { Download, FileImage, Settings2, Play, Loader2, XCircle, Save, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 type ImageFormat = 'jpg' | 'png' | 'webp'
@@ -100,25 +100,37 @@ const CompressImagePage = (): React.JSX.Element => {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>文件上传</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Uploader onSelect={setFile} />
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
+      <div className="space-y-6">
+        <Card className="overflow-hidden transition-all hover:shadow-md">
+          <CardHeader className="bg-muted/30 pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileImage className="size-5 text-primary" />
+              文件上传
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <Uploader 
+              onSelect={setFile}
+              accept="image/*"
+              label="拖拽图片到此处，或点击选择文件"
+              showPreview={false}
+            
+            />
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>压缩设置</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Card className="overflow-hidden transition-all hover:shadow-md">
+          <CardHeader className="bg-muted/30 pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Settings2 className="size-5 text-primary" />
+              压缩设置
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">目标格式</label>
+                <label className="text-sm font-medium text-muted-foreground">目标格式</label>
                 <Select value={format} onValueChange={(v) => setFormat(v as ImageFormat)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="选择格式" />
@@ -133,20 +145,24 @@ const CompressImagePage = (): React.JSX.Element => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">质量</label>
+                <div className="flex justify-between">
+                  <label className="text-sm font-medium text-muted-foreground">质量 (Quality)</label>
+                  <span className="text-sm text-muted-foreground">{quality}%</span>
+                </div>
                 <Slider
                   min={0}
                   max={100}
                   step={1}
                   value={[quality]}
                   onValueChange={(v) => setQuality(v[0])}
+                  className="py-2"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">宽度</label>
+                <label className="text-sm font-medium text-muted-foreground">宽度 (Width)</label>
                 <Input
                   type="number"
                   placeholder="自动"
@@ -155,7 +171,7 @@ const CompressImagePage = (): React.JSX.Element => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">高度</label>
+                <label className="text-sm font-medium text-muted-foreground">高度 (Height)</label>
                 <Input
                   type="number"
                   placeholder="自动"
@@ -166,60 +182,107 @@ const CompressImagePage = (): React.JSX.Element => {
             </div>
 
             <Separator />
-            <Button onClick={onCompress} disabled={!canRun} className="w-full">
-              {running ? '处理中...' : '开始压缩'}
-            </Button>
-            <Button onClick={onCancel} disabled={!running} variant="destructive" className="w-full">
-              取消
-            </Button>
-            <Button
-              onClick={onSaveAs}
-              disabled={!outputPath || running}
-              variant="secondary"
-              className="w-full"
-            >
-              <Download className="size-4" /> 另存为
-            </Button>
-            {typeof progress === 'number' ? (
-              <div className="space-y-1">
-                <Progress value={progress} />
-                <div className="text-xs text-muted-foreground">{progress}%</div>
-              </div>
-            ) : null}
-            <div className="text-xs text-muted-foreground min-h-6 break-words">{status}</div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle>压缩前后预览</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">原图</div>
+            <div className="flex flex-col gap-3">
+              <Button onClick={onCompress} disabled={!canRun} className="w-full gap-2" size="lg">
+                {running ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> 处理中...
+                  </>
+                ) : (
+                  <>
+                    <Play className="size-4" /> 开始压缩
+                  </>
+                )}
+              </Button>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button onClick={onCancel} disabled={!running} variant="destructive" className="w-full gap-2">
+                  <XCircle className="size-4" /> 取消
+                </Button>
+                <Button
+                  onClick={onSaveAs}
+                  disabled={!outputPath || running}
+                  variant="outline"
+                  className="w-full gap-2"
+                >
+                  <Save className="size-4" /> 另存为
+                </Button>
+              </div>
+            </div>
+
+            {typeof progress === 'number' && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>处理进度</span>
+                  <span>{progress}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </div>
+            )}
+            
+            <div className="min-h-6 text-xs text-center text-muted-foreground wrap-break-word">
+              {status}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-6">
+        <Card className="h-full overflow-hidden transition-all hover:shadow-md flex flex-col">
+          <CardHeader className="bg-muted/30 pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ImageIcon className="size-5 text-primary" />
+              压缩前后预览
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 pt-6 grid gap-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <div className="size-2 rounded-full bg-blue-500" />
+                原图
+              </div>
               {file ? (
-                <img src={URL.createObjectURL(file)} className="w-full h-auto rounded-md" />
+                <div className="rounded-lg border bg-muted/50 p-2 flex items-center justify-center min-h-[200px]">
+                  <img 
+                    src={URL.createObjectURL(file)} 
+                    className="max-w-full max-h-[400px] rounded shadow-sm object-contain" 
+                    alt="Original"
+                  />
+                </div>
               ) : (
-                <div className="h-40 rounded-md border flex items-center justify-center text-sm text-muted-foreground">
-                  无文件
+                <div className="h-48 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/50 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <FileImage className="size-8 opacity-50" />
+                  <span className="text-sm">暂无图片</span>
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">结果</div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <div className="size-2 rounded-full bg-green-500" />
+                结果
+              </div>
               {outputPath ? (
-                <img src={encodeURI(`file://${outputPath}`)} className="w-full h-auto rounded-md" />
+                <div className="rounded-lg border bg-muted/50 p-2 flex items-center justify-center min-h-[200px]">
+                  <img 
+                    src={`file://${outputPath}`} 
+                    className="max-w-full max-h-[400px] rounded shadow-sm object-contain" 
+                    alt="Compressed"
+                  />
+                </div>
               ) : (
-                <div className="h-40 rounded-md border flex items-center justify-center text-sm text-muted-foreground">
-                  暂无结果
+                <div className="h-48 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/50 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <Download className="size-8 opacity-50" />
+                  <span className="text-sm">等待处理</span>
                 </div>
               )}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
