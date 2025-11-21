@@ -1,8 +1,8 @@
-import GoHome from '@/components/common/goHome'
 import MyTabs from '@/components/common/myTabs'
 import { Video } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
 import { motion } from 'motion/react'
+import GoHome from '@/components/common/goHome'
 
 const VideoMergePage = (): React.JSX.Element => {
   const tabList = [

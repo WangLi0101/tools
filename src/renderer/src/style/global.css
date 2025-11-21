@@ -9,7 +9,7 @@
   --card-foreground: oklch(0.24 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.24 0 0);
-  --primary: oklch(0.62 0.17 276);
+  --primary: oklch(60% 0.118 184.704);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.972 0.003 265);
   --secondary-foreground: oklch(0.34 0.02 265);
@@ -21,7 +21,7 @@
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.92 0.005 260);
   --input: oklch(0.972 0.003 265);
-  --ring: oklch(0.62 0.17 276);
+  --ring: oklch(60% 0.118 184.704);
   --chart-1: oklch(0.7156 0.0605 248.6845);
   --chart-2: oklch(0.7875 0.0917 35.9616);
   --chart-3: oklch(0.5778 0.0759 254.1573);
@@ -29,12 +29,12 @@
   --chart-5: oklch(0.4241 0.0952 264.0306);
   --sidebar: oklch(0.96 0.003 255);
   --sidebar-foreground: oklch(0.24 0 0);
-  --sidebar-primary: oklch(0.62 0.17 276);
+  --sidebar-primary: oklch(60% 0.118 184.704);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.96 0.01 260);
   --sidebar-accent-foreground: oklch(0.38 0.12 270);
   --sidebar-border: oklch(0.93 0.0055 265);
-  --sidebar-ring: oklch(0.62 0.17 276);
+  --sidebar-ring: oklch(60% 0.118 184.704);
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, Inter, 'Segoe UI', Roboto, Helvetica, Arial,
     'Apple Color Emoji', 'Segoe UI Emoji';
@@ -66,7 +66,7 @@
   --card-foreground: oklch(0.92 0 0);
   --popover: oklch(0.29 0.03 265);
   --popover-foreground: oklch(0.92 0 0);
-  --primary: oklch(0.62 0.17 276);
+  --primary: oklch(60% 0.118 184.704);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.32 0.03 266);
   --secondary-foreground: oklch(0.92 0 0);
@@ -86,12 +86,12 @@
   --chart-5: oklch(0.4241 0.0952 264.0306);
   --sidebar: oklch(0.3 0.028 268);
   --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-primary: oklch(0.62 0.17 276);
+  --sidebar-primary: oklch(60% 0.118 184.704);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.35 0.055 268);
   --sidebar-accent-foreground: oklch(0.88 0.055 254);
   --sidebar-border: oklch(0.38 0.03 270);
-  --sidebar-ring: oklch(0.62 0.17 276);
+  --sidebar-ring: oklch(60% 0.118 184.704);
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, Inter, 'Segoe UI', Roboto, Helvetica, Arial,
     'Apple Color Emoji', 'Segoe UI Emoji';

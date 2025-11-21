@@ -1,10 +1,10 @@
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { FileCog, Moon, Minus, X, FileDown } from 'lucide-react'
+import { Moon, Minus, X, FileDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
-import { version } from '../../../../../package.json'
+
 const Tool = (): React.JSX.Element => {
   const { setTheme, theme } = useTheme()
   const [updatePercent, setUpdatePercent] = useState<number | null>(null)
@@ -54,12 +54,7 @@ const Tool = (): React.JSX.Element => {
   }, [])
 
   return (
-    <div className="tool px-4 py-2 border-b border-input bg-card/70 backdrop-blur-md flex items-center justify-between [-webkit-app-region:drag]">
-      <div className="flex items-center gap-2 text-foreground">
-        <FileCog className="size-5 text-primary" />
-        <span className="text-sm font-medium">工具箱</span>
-        <span className="text-sm text-primary">v{version}</span>
-      </div>
+    <div className="tool px-4 py-2 flex items-center justify-end gap-2 [-webkit-app-region:drag]">
       <div className="flex items-center gap-1 text-muted-foreground [-webkit-app-region:no-drag]">
         <Button
           variant="ghost"
