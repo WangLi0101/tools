@@ -241,9 +241,9 @@ const ImagePage = (): React.JSX.Element => {
               </div>
               {outputPath && (
                 <div className="absolute top-3 right-3 z-10">
-                    <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-600 text-xs font-medium">
-                         完成
-                    </span>
+                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-600 text-xs font-medium">
+                    完成
+                  </span>
                 </div>
               )}
               <div className="flex-1 flex items-center justify-center p-4">

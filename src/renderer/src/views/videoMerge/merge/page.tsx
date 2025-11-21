@@ -186,7 +186,7 @@ const Merge = () => {
   const formats = ['mp4', 'm4v', 'mov', 'avi', 'mkv', 'webm', 'ts', 'mts', 'm2ts', 'flv', 'wmv']
 
   return (
-    <div className="w-full h-full p-2 space-y-6">
+    <div className="w-full p-2 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Settings Column */}
         <div className="md:col-span-2 space-y-6">

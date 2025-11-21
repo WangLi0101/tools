@@ -237,7 +237,9 @@ const AudioPage = (): React.JSX.Element => {
                 <div className="px-2 py-1 rounded-md bg-background/90 border text-xs font-medium">
                   原文件
                 </div>
-                {file && <span className="text-xs text-muted-foreground truncate">{file.name}</span>}
+                {file && (
+                  <span className="text-xs text-muted-foreground truncate">{file.name}</span>
+                )}
               </div>
               <div className="flex-1 flex items-center justify-center bg-background/50 rounded-lg p-8">
                 {file ? (

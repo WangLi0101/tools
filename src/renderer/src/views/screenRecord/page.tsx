@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { motion } from 'motion/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -217,7 +218,12 @@ const ScreenRecord = () => {
   }, [mediaId, frameRate, getVideoStream])
 
   return (
-    <div className="w-full h-full space-y-6">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      className="w-full h-full space-y-6"
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -441,7 +447,7 @@ const ScreenRecord = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 export default ScreenRecord

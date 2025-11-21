@@ -13,7 +13,16 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Progress } from '@/components/ui/progress'
-import { Download, FileImage, Settings2, Play, Loader2, XCircle, Save, Image as ImageIcon } from 'lucide-react'
+import {
+  Download,
+  FileImage,
+  Settings2,
+  Play,
+  Loader2,
+  XCircle,
+  Save,
+  Image as ImageIcon
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 type ImageFormat = 'jpg' | 'png' | 'webp'
@@ -110,12 +119,11 @@ const CompressImagePage = (): React.JSX.Element => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            <Uploader 
+            <Uploader
               onSelect={setFile}
               accept="image/*"
               label="拖拽图片到此处，或点击选择文件"
               showPreview={false}
-            
             />
           </CardContent>
         </Card>
@@ -146,7 +154,9 @@ const CompressImagePage = (): React.JSX.Element => {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <label className="text-sm font-medium text-muted-foreground">质量 (Quality)</label>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    质量 (Quality)
+                  </label>
                   <span className="text-sm text-muted-foreground">{quality}%</span>
                 </div>
                 <Slider
@@ -197,7 +207,12 @@ const CompressImagePage = (): React.JSX.Element => {
               </Button>
 
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={onCancel} disabled={!running} variant="destructive" className="w-full gap-2">
+                <Button
+                  onClick={onCancel}
+                  disabled={!running}
+                  variant="destructive"
+                  className="w-full gap-2"
+                >
                   <XCircle className="size-4" /> 取消
                 </Button>
                 <Button
@@ -220,7 +235,7 @@ const CompressImagePage = (): React.JSX.Element => {
                 <Progress value={progress} className="h-2" />
               </div>
             )}
-            
+
             <div className="min-h-6 text-xs text-center text-muted-foreground wrap-break-word">
               {status}
             </div>
@@ -244,9 +259,9 @@ const CompressImagePage = (): React.JSX.Element => {
               </div>
               {file ? (
                 <div className="rounded-lg border bg-muted/50 p-2 flex items-center justify-center min-h-[200px]">
-                  <img 
-                    src={URL.createObjectURL(file)} 
-                    className="max-w-full max-h-[400px] rounded shadow-sm object-contain" 
+                  <img
+                    src={URL.createObjectURL(file)}
+                    className="max-w-full max-h-[400px] rounded shadow-sm object-contain"
                     alt="Original"
                   />
                 </div>
@@ -267,9 +282,9 @@ const CompressImagePage = (): React.JSX.Element => {
               </div>
               {outputPath ? (
                 <div className="rounded-lg border bg-muted/50 p-2 flex items-center justify-center min-h-[200px]">
-                  <img 
-                    src={`file://${outputPath}`} 
-                    className="max-w-full max-h-[400px] rounded shadow-sm object-contain" 
+                  <img
+                    src={`file://${outputPath}`}
+                    className="max-w-full max-h-[400px] rounded shadow-sm object-contain"
                     alt="Compressed"
                   />
                 </div>

@@ -110,7 +110,6 @@ const CompressAudioPage = (): React.JSX.Element => {
               accept="audio/*,video/*"
               label="拖拽音/视频到此处，或点击选择文件"
               showPreview={false}
-              
             />
           </CardContent>
         </Card>
@@ -170,12 +169,12 @@ const CompressAudioPage = (): React.JSX.Element => {
                   </>
                 )}
               </Button>
-              
+
               <div className="grid grid-cols-2 gap-3">
-                <Button 
-                  onClick={onCancel} 
-                  disabled={!running} 
-                  variant="destructive" 
+                <Button
+                  onClick={onCancel}
+                  disabled={!running}
+                  variant="destructive"
                   className="w-full gap-2"
                 >
                   <XCircle className="size-4" /> 取消
@@ -200,10 +199,8 @@ const CompressAudioPage = (): React.JSX.Element => {
                 <Progress value={progress} className="h-2" />
               </div>
             )}
-            
-            <div className="min-h-6 text-xs text-center text-muted-foreground">
-              {status}
-            </div>
+
+            <div className="min-h-6 text-xs text-center text-muted-foreground">{status}</div>
           </CardContent>
         </Card>
       </div>

@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import GoHome from '@/components/common/goHome'
-
+import { motion } from 'motion/react'
 const Pdf = (): React.JSX.Element => {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState('')
@@ -66,7 +66,12 @@ const Pdf = (): React.JSX.Element => {
   }, [outputPath])
 
   return (
-    <div className="w-full h-full space-y-6">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      className="w-full h-full space-y-6"
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -161,7 +166,7 @@ const Pdf = (): React.JSX.Element => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   )
 }
 

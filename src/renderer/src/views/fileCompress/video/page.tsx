@@ -242,9 +242,14 @@ const CompressVideoPage = (): React.JSX.Element => {
                   </>
                 )}
               </Button>
-              
+
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={onCancel} disabled={!running} variant="destructive" className="w-full gap-2">
+                <Button
+                  onClick={onCancel}
+                  disabled={!running}
+                  variant="destructive"
+                  className="w-full gap-2"
+                >
                   <XCircle className="size-4" /> 取消
                 </Button>
                 <Button
@@ -267,7 +272,7 @@ const CompressVideoPage = (): React.JSX.Element => {
                 <Progress value={progress} className="h-2" />
               </div>
             )}
-            
+
             <div className="min-h-6 text-xs text-center text-muted-foreground wrap-break-word">
               {status}
             </div>
