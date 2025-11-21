@@ -58,18 +58,9 @@ const GroupPage = (): React.JSX.Element => {
     'group.format',
     defaultSelectedFormat
   )
-
-  const rule = 'regex'
   const [regexText, setRegexText] = useStorage<string>('group.regex', '^(\\d{2})_(\\d{8})')
   const [filesRaw, setFilesRaw] = useState<{ url: string; createTime: number }[]>([])
   const [group, setGroup] = useState<GroupItem[]>([])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('group.rule', rule)
-    } catch {}
-  }, [])
-
   const STATUS_MAP = {
     ready: {
       label: '待处理',
