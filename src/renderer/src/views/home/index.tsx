@@ -75,50 +75,62 @@ const HomePage = (): React.JSX.Element => {
     }
   } as const
 
+  const sections = [
+    { id: 'file', title: '文件处理', description: '格式转换与文档处理' },
+    { id: 'video', title: '视频处理', description: '视频剪辑、录制与下载' }
+  ]
+
   const items = [
     {
       title: '文件转换',
       description: '轻松转换各种文件格式，支持图像、视频、音频',
       Icon: FileSliders,
       url: '/fileTransForm',
-      theme: 'indigo'
+      theme: 'indigo',
+      category: 'file'
     },
     {
       title: '文件压缩',
       description: '轻松压缩各种文件格式，支持图像、视频、音频',
       Icon: FileCog,
       url: '/fileCompress',
-      theme: 'rose'
+      theme: 'rose',
+      category: 'file'
     },
     {
       title: 'm3u8下载',
       description: '支持m3u8视频下载',
       Icon: PlayCircle,
       url: '/m3u8',
-      theme: 'teal'
+      theme: 'teal',
+      category: 'video'
     },
     {
       title: 'PDF生成',
       description: '支持网页生成PDF文件',
       Icon: FileDown,
       url: '/pdf',
-      theme: 'amber'
+      theme: 'amber',
+      category: 'file'
     },
     {
       title: '视频合并',
       description: '支持合并多个视频文件',
       Icon: Video,
       url: '/videoMerge',
-      theme: 'cyan'
+      theme: 'cyan',
+      category: 'video'
     },
     {
       title: '屏幕录制',
       description: '支持屏幕录制',
       Icon: ScreenShare,
       url: '/screenRecord',
-      theme: 'violet'
+      theme: 'violet',
+      category: 'video'
     }
   ]
+
   const navigate = useNavigate()
   const go = (url: string): void => {
     navigate(url)
@@ -165,60 +177,86 @@ const HomePage = (): React.JSX.Element => {
           </p>
         </div>
 
-        {/* Grid Section */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item, index) => {
-            const accent = accents[item.theme as keyof typeof accents]
-            const Icon = item.Icon
+        <div className="space-y-12">
+          {sections.map((section) => {
+            const sectionItems = items.filter((item) => item.category === section.id)
             return (
               <motion.div
-                key={index}
+                key={section.id}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.05, duration: 0.4 }}
-                className="group h-full"
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 0.5 }}
+                className="relative overflow-hidden rounded-3xl bg-muted/30 border border-border/50 p-6 sm:p-8"
               >
-                <Card
-                  className={cn(
-                    'relative h-full overflow-hidden border-muted transition-all duration-300 cursor-pointer',
-                    'hover:shadow-xl hover:-translate-y-1 hover:shadow-primary/5',
-                    accent.border
-                  )}
-                  onClick={() => go(item.url)}
-                >
-                  {/* Background Gradient Effect */}
-                  <div
-                    className={cn(
-                      'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-linear-to-br',
-                      accent.gradient
-                    )}
-                  />
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="h-8 w-1 rounded-full bg-primary/50" />
+                  <h2 className="text-2xl font-bold tracking-tight text-foreground/90">
+                    {section.title}
+                  </h2>
+                  <span className="text-sm text-muted-foreground ml-2 border-l pl-3 border-border/50">
+                    {section.description}
+                  </span>
+                </div>
 
-                  <CardContent className="relative z-10 flex items-start gap-4 p-6">
-                    <div
-                      className={cn(
-                        'shrink-0 p-3 rounded-xl transition-colors duration-300',
-                        accent.iconBg
-                      )}
-                    >
-                      <Icon className={cn('size-6', accent.icon)} />
-                    </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {sectionItems.map((item, index) => {
+                    const accent = accents[item.theme as keyof typeof accents]
+                    const Icon = item.Icon
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: index * 0.05, duration: 0.4 }}
+                        className="group h-full"
+                      >
+                        <Card
+                          className={cn(
+                            'relative h-full overflow-hidden border-background/50 bg-background/50 backdrop-blur-sm transition-all duration-300 cursor-pointer',
+                            'hover:shadow-xl hover:-translate-y-1 hover:shadow-primary/5 hover:bg-background',
+                            accent.border
+                          )}
+                          onClick={() => go(item.url)}
+                        >
+                          {/* Background Gradient Effect */}
+                          <div
+                            className={cn(
+                              'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-linear-to-br',
+                              accent.gradient
+                            )}
+                          />
 
-                    <div className="flex-1 min-w-0 pt-1">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <CardTitle className="text-lg font-semibold  transition-colors truncate">
-                          {item.title}
-                        </CardTitle>
-                        <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0 shrink-0">
-                          <ArrowRight className={cn('size-4', accent.icon)} />
-                        </div>
-                      </div>
-                      <CardDescription className="text-sm leading-relaxed line-clamp-2">
-                        {item.description}
-                      </CardDescription>
-                    </div>
-                  </CardContent>
-                </Card>
+                          <CardContent className="relative z-10 flex items-start gap-3 p-4">
+                            <div
+                              className={cn(
+                                'shrink-0 p-2.5 rounded-lg transition-colors duration-300',
+                                accent.iconBg
+                              )}
+                            >
+                              <Icon className={cn('size-5', accent.icon)} />
+                            </div>
+
+                            <div className="flex-1 min-w-0 pt-0.5">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <CardTitle className="text-base font-semibold transition-colors truncate">
+                                  {item.title}
+                                </CardTitle>
+                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0 shrink-0">
+                                  <ArrowRight className={cn('size-3.5', accent.icon)} />
+                                </div>
+                              </div>
+                              <CardDescription className="text-xs leading-relaxed line-clamp-2">
+                                {item.description}
+                              </CardDescription>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    )
+                  })}
+                </div>
               </motion.div>
             )
           })}
