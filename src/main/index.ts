@@ -6,6 +6,7 @@ import { registerFfmpegIPC } from '../preload/ffmpeg/ffmpegIPC'
 import { registerPlaywrightIPC } from '../preload/playwright/playwrightIPC'
 import { registerIpc } from '../preload/api/ipc'
 import { registerRecordIPC } from '../preload/record/recortIPC'
+import { registerDownloadIPC } from '../preload/download/downloadIPC'
 
 function createWindow(): void {
   // Create the browser window.
@@ -63,6 +64,7 @@ app.whenReady().then(() => {
   registerFfmpegIPC()
   registerPlaywrightIPC()
   registerRecordIPC()
+  registerDownloadIPC()
 
   createWindow()
 

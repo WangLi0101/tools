@@ -14,6 +14,7 @@ import VideoMergePage from '@/views/videoMerge/page'
 import Merge from '@/views/videoMerge/merge/page'
 import GroupPage from '@/views/videoMerge/group/page'
 import ScreenRecord from '@/views/screenRecord/page'
+import VideoDownloadPage from '@/views/videoDownload/page'
 import ScrollToTop from '@/components/common/scrollTop'
 
 const routeList = [
@@ -82,6 +83,10 @@ const routeList = [
   {
     path: '/screenRecord',
     element: <ScreenRecord />
+  },
+  {
+    path: '/videoDownload',
+    element: <VideoDownloadPage />
   }
 ]
 

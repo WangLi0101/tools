@@ -7,7 +7,8 @@ import {
   Video,
   ScreenShare,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Download
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -127,6 +128,14 @@ const HomePage = (): React.JSX.Element => {
       Icon: ScreenShare,
       url: '/screenRecord',
       theme: 'violet',
+      category: 'video'
+    },
+    {
+      title: '视频下载',
+      description: '支持批量视频下载',
+      Icon: Download,
+      url: '/videoDownload',
+      theme: 'blue',
       category: 'video'
     }
   ]

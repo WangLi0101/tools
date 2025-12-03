@@ -4,6 +4,7 @@ import { ffmpegApi } from './ffmpeg/index'
 import { api } from './api/index'
 import { playwrightApi } from './playwright'
 import { recordApi } from './record'
+import { downloadApi } from './download'
 
 // Custom APIs for renderer
 
@@ -17,6 +18,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('ffmpeg', ffmpegApi)
     contextBridge.exposeInMainWorld('playwright', playwrightApi)
     contextBridge.exposeInMainWorld('record', recordApi)
+    contextBridge.exposeInMainWorld('download', downloadApi)
   } catch (error) {
     console.error(error)
   }
@@ -29,4 +31,6 @@ if (process.contextIsolated) {
   window.playwright = playwrightApi
   // @ts-ignore (define in dts)
   window.api = api
+  // @ts-ignore (define in dts)
+  window.download = downloadApi
 }
