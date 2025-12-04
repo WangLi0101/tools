@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 
+// 下载任务结构，统一维护任务状态与进度信息
 interface DownloadTask {
   id: string
   url: string
@@ -37,6 +38,7 @@ interface DownloadTask {
   error?: string
 }
 
+// 根据任务状态返回 UI 展示配置
 const getStatusConfig = (status: DownloadTask['status']) => {
   switch (status) {
     case 'completed':
@@ -80,6 +82,7 @@ const getStatusConfig = (status: DownloadTask['status']) => {
   }
 }
 
+// 文件批量下载主页面
 const FileDownloadPage = () => {
   const [outDir, setOutDir] = useStorage<string>('videoDownload.outDir', '')
   const [concurrency, setConcurrency] = useStorage<number>('videoDownload.concurrency', 3)
@@ -87,8 +90,10 @@ const FileDownloadPage = () => {
   const [tasks, setTasks] = useState<DownloadTask[]>([])
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
 
+  // 判断文件名是否已带扩展名
   const hasFileExtension = (name: string) => /\.[^./\\]+$/.test(name)
 
+  // 尝试从 URL 中提取文件扩展名
   const extractExtensionFromUrl = (link: string) => {
     const fromPath = (path: string) => {
       const filename = path.split('/').pop() ?? ''
@@ -108,13 +113,14 @@ const FileDownloadPage = () => {
     return fromPath(sanitized)
   }
 
+  // 输入未包含扩展名时自动补齐
   const attachExtensionIfMissing = (name: string, link: string) => {
     if (hasFileExtension(name)) return name
     const ext = extractExtensionFromUrl(link)
     return ext ? `${name}${ext}` : name
   }
 
-  // Choose directory
+  // 选择下载输出目录
   const chooseDir = async (): Promise<void> => {
     const r = await window.api.selectDirectory()
     if (!r.canceled && r.path) {
@@ -122,7 +128,7 @@ const FileDownloadPage = () => {
     }
   }
 
-  // Get disk space
+  // 监听输出目录变化并刷新磁盘容量
   useEffect(() => {
     if (!outDir) return
     ;(async () => {
@@ -131,6 +137,7 @@ const FileDownloadPage = () => {
     })()
   }, [outDir])
 
+  // 启动单个下载任务
   const startDownload = useCallback(
     async (task: DownloadTask) => {
       if (!outDir) {
@@ -161,7 +168,7 @@ const FileDownloadPage = () => {
     [outDir]
   )
 
-  // Task queue manager
+  // 任务队列调度器：控制并发
   useEffect(() => {
     if (!outDir) return
 
@@ -176,6 +183,7 @@ const FileDownloadPage = () => {
     }
   }, [tasks, concurrency, outDir, startDownload])
 
+  // 解析用户批量输入并生成任务
   const parseInput = () => {
     const lines = inputText.split('\n').filter((l) => l.trim())
     const newTasks: DownloadTask[] = []
@@ -208,6 +216,7 @@ const FileDownloadPage = () => {
     toast.success(`已添加 ${newTasks.length} 个任务`)
   }
 
+  // 将待处理任务统一加入队列
   const queueAll = () => {
     if (!outDir) {
       toast.error('请先选择保存目录')
@@ -231,6 +240,7 @@ const FileDownloadPage = () => {
     )
   }
 
+  // 若任务正在下载，则先请求暂停
   const pauseIfDownloading = useCallback(async (task: DownloadTask) => {
     if (task.status !== 'downloading') return true
     const res = await window.download.pauseDownload(task.id)
@@ -241,6 +251,7 @@ const FileDownloadPage = () => {
     return true
   }, [])
 
+  // 清空任务列表，需确保进行中的任务已暂停
   const clearTasks = async () => {
     if (tasks.length === 0) return
     const activeTasks = tasks.filter((t) => t.status === 'downloading')
@@ -253,6 +264,7 @@ const FileDownloadPage = () => {
     toast.success('任务已清空')
   }
 
+  // 删除单个任务
   const deleteTask = async (task: DownloadTask) => {
     const ok = await pauseIfDownloading(task)
     if (!ok) return
@@ -260,6 +272,7 @@ const FileDownloadPage = () => {
     toast.info('任务已删除')
   }
 
+  // 暂停按钮事件
   const pauseTask = async (task: DownloadTask) => {
     if (task.status !== 'downloading') return
     const res = await window.download.pauseDownload(task.id)
@@ -273,6 +286,7 @@ const FileDownloadPage = () => {
     toast.info('任务已暂停')
   }
 
+  // 恢复暂停任务，重新排队
   const resumeTask = (task: DownloadTask) => {
     if (!outDir) {
       toast.error('请先选择保存目录')
@@ -284,6 +298,7 @@ const FileDownloadPage = () => {
     )
   }
 
+  // 订阅主进程发送的任务状态事件，并在组件销毁时清理
   useEffect(() => {
     const removeProgress = window.download.onProgress((data) => {
       setTasks((prev) =>
@@ -342,6 +357,7 @@ const FileDownloadPage = () => {
     }
   }, [])
 
+  // 通用字节格式化
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B'
     const k = 1024
@@ -350,9 +366,10 @@ const FileDownloadPage = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
+  // 将字节转换为 GB，显示磁盘容量
   const fmtBytes = (n: number): string => (n ? `${(n / 1024 / 1024 / 1024).toFixed(2)} GB` : '未知')
 
-  // Stats calculations
+  // 下载统计信息
   const stats = {
     total: tasks.length,
     completed: tasks.filter((t) => t.status === 'completed').length,

@@ -6,6 +6,7 @@ import path from 'path'
 
 type ClientRequest = http.ClientRequest
 
+// 活动下载任务的元信息，保存请求、文件流以及当前进度
 interface ActiveDownload {
   request?: ClientRequest
   fileStream?: fs.WriteStream
@@ -17,6 +18,7 @@ interface ActiveDownload {
   win: BrowserWindow
 }
 
+// 以任务 ID 为 key 存储所有进行中的下载
 const activeDownloads = new Map<string, ActiveDownload>()
 
 /**
@@ -65,6 +67,7 @@ const parseTotalBytes = (response: http.IncomingMessage, initialBytes: number) =
 }
 
 export const registerDownloadIPC = (): void => {
+  // 处理渲染进程发起的下载请求
   ipcMain.handle('download-file', async (event, { url, filePath, id, resumeBytes = 0 }) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { success: false, error: 'Window not found' }
@@ -89,6 +92,7 @@ export const registerDownloadIPC = (): void => {
         }
       }
 
+      // 根据协议选择 http/https，并准备请求头
       const protocol = url.startsWith('https') ? https : http
       const headers: Record<string, string> = {}
       // 设置Range头
@@ -96,6 +100,7 @@ export const registerDownloadIPC = (): void => {
         headers['Range'] = `bytes=${startBytes}-`
       }
 
+      // 建立任务初始状态并缓存，方便后续暂停/恢复
       const downloadState: ActiveDownload = {
         filePath,
         url,
@@ -156,6 +161,7 @@ export const registerDownloadIPC = (): void => {
         // 管道
         response.pipe(fileStream)
 
+        // 数据流入时累加字节，并定期回传进度
         response.on('data', (chunk) => {
           downloadState.receivedBytes += chunk.length
           const now = Date.now()
@@ -179,6 +185,7 @@ export const registerDownloadIPC = (): void => {
           lastBytes = downloadState.receivedBytes
         })
         // 文件写入完成
+        // 文件写入完成，通知渲染进程成功
         fileStream.on('finish', () => {
           if (downloadState.isPaused) return
           fileStream.close()
@@ -195,6 +202,7 @@ export const registerDownloadIPC = (): void => {
 
       downloadState.request = request
 
+      // 请求层面错误（如断网、DNS 失败）
       request.on('error', (err) => {
         if (downloadState.isPaused) return
         cleanupTask(id, true)
@@ -210,6 +218,7 @@ export const registerDownloadIPC = (): void => {
     }
   })
 
+  // 处理渲染进程的暂停指令：保留已写入的文件
   ipcMain.handle('download-pause', async (_event, { id }) => {
     const task = activeDownloads.get(id)
     if (!task) return { success: false, error: 'Download not found' }
