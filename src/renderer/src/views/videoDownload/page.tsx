@@ -14,7 +14,8 @@ import {
   X,
   ListVideo,
   Settings2,
-  Activity
+  Activity,
+  Pause
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
@@ -28,7 +29,7 @@ interface DownloadTask {
   id: string
   url: string
   fileName: string
-  status: 'pending' | 'queued' | 'downloading' | 'completed' | 'error'
+  status: 'pending' | 'queued' | 'downloading' | 'completed' | 'error' | 'paused'
   progress: number
   totalBytes: number
   receivedBytes: number
@@ -50,6 +51,12 @@ const getStatusConfig = (status: DownloadTask['status']) => {
         icon: Loader2,
         label: '下载中',
         spin: true
+      }
+    case 'paused':
+      return {
+        color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        icon: Pause,
+        label: '已暂停'
       }
     case 'error':
       return {
@@ -111,7 +118,12 @@ const VideoDownloadPage = () => {
 
       const filePath = `${outDir}/${task.fileName}`
 
-      const res = await window.download.startDownload(task.url, filePath, task.id)
+      const res = await window.download.startDownload(
+        task.url,
+        filePath,
+        task.id,
+        task.receivedBytes || 0
+      )
       if (!res.success) {
         setTasks((prev) =>
           prev.map((t) => (t.id === task.id ? { ...t, status: 'error', error: res.error } : t))
@@ -174,7 +186,9 @@ const VideoDownloadPage = () => {
       return
     }
 
-    const pendingTasks = tasks.filter((t) => t.status === 'pending' || t.status === 'error')
+    const pendingTasks = tasks.filter(
+      (t) => t.status === 'pending' || t.status === 'error' || t.status === 'paused'
+    )
     if (pendingTasks.length === 0 && tasks.length > 0 && inputText.trim()) {
       parseInput()
       return
@@ -182,19 +196,64 @@ const VideoDownloadPage = () => {
 
     setTasks((prev) =>
       prev.map((t) =>
-        t.status === 'pending' || t.status === 'error'
+        t.status === 'pending' || t.status === 'error' || t.status === 'paused'
           ? { ...t, status: 'queued', error: undefined }
           : t
       )
     )
   }
 
-  const clearTasks = () => {
+  const pauseIfDownloading = useCallback(async (task: DownloadTask) => {
+    if (task.status !== 'downloading') return true
+    const res = await window.download.pauseDownload(task.id)
+    if (!res.success) {
+      toast.error(`暂停失败: ${res.error}`)
+      return false
+    }
+    return true
+  }, [])
+
+  const clearTasks = async () => {
+    if (tasks.length === 0) return
+    const activeTasks = tasks.filter((t) => t.status === 'downloading')
+    const results = await Promise.all(activeTasks.map((task) => pauseIfDownloading(task)))
+    if (results.includes(false)) {
+      toast.error('部分任务暂停失败，请稍后重试')
+      return
+    }
     setTasks([])
+    toast.success('任务已清空')
   }
 
-  const deleteTask = (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id))
+  const deleteTask = async (task: DownloadTask) => {
+    const ok = await pauseIfDownloading(task)
+    if (!ok) return
+    setTasks((prev) => prev.filter((t) => t.id !== task.id))
+    toast.info('任务已删除')
+  }
+
+  const pauseTask = async (task: DownloadTask) => {
+    if (task.status !== 'downloading') return
+    const res = await window.download.pauseDownload(task.id)
+    if (!res.success) {
+      toast.error(`暂停失败: ${res.error}`)
+      return
+    }
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: 'paused', speed: 0 } : t))
+    )
+    toast.info('任务已暂停')
+  }
+
+  const resumeTask = (task: DownloadTask) => {
+    if (!outDir) {
+      toast.error('请先选择保存目录')
+      return
+    }
+    if (task.status !== 'paused') return
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: 'queued', error: undefined } : t))
+    )
   }
 
   useEffect(() => {
@@ -228,10 +287,30 @@ const VideoDownloadPage = () => {
       toast.error(`下载出错: ${data.error}`)
     })
 
+    const removePaused = window.download.onPaused((data) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === data.id
+            ? {
+                ...t,
+                status: 'paused',
+                receivedBytes: data.receivedBytes,
+                totalBytes: data.totalBytes,
+                progress: data.totalBytes
+                  ? (data.receivedBytes / data.totalBytes) * 100
+                  : t.progress,
+                speed: 0
+              }
+            : t
+        )
+      )
+    })
+
     return () => {
       removeProgress()
       removeComplete()
       removeError()
+      removePaused()
     }
   }, [])
 
@@ -263,7 +342,7 @@ const VideoDownloadPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      <div className="space-y-6 container mx-auto p-6 max-w-7xl">
+      <div className="space-y-6 container mx-auto  max-w-7xl">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
@@ -433,7 +512,7 @@ const VideoDownloadPage = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={clearTasks}
+                    onClick={() => void clearTasks()}
                     className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="size-4 mr-2" />
@@ -506,17 +585,44 @@ const VideoDownloadPage = () => {
                                   </div>
                                 </div>
 
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => deleteTask(t.id)}
-                                >
-                                  <X className="size-4" />
-                                </Button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {t.status === 'downloading' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => pauseTask(t)}
+                                      title="暂停"
+                                    >
+                                      <Pause className="size-4" />
+                                    </Button>
+                                  )}
+                                  {t.status === 'paused' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => resumeTask(t)}
+                                      title="继续"
+                                    >
+                                      <Play className="size-4" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => void deleteTask(t)}
+                                    title="删除"
+                                  >
+                                    <X className="size-4" />
+                                  </Button>
+                                </div>
                               </div>
 
-                              {(t.status === 'downloading' || t.status === 'completed') && (
+                              {(t.status === 'downloading' ||
+                                t.status === 'completed' ||
+                                t.status === 'paused') && (
                                 <div className="grid grid-cols-3 gap-4 text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
                                   <div className="flex flex-col">
                                     <span className="opacity-70">进度</span>
