@@ -131,12 +131,12 @@ const HomePage = (): React.JSX.Element => {
       category: 'video'
     },
     {
-      title: '视频下载',
-      description: '支持批量视频下载',
+      title: '文件下载',
+      description: '支持批量文件下载',
       Icon: Download,
-      url: '/videoDownload',
+      url: '/fileDownload',
       theme: 'blue',
-      category: 'video'
+      category: 'file'
     }
   ]
 

@@ -80,7 +80,7 @@ const getStatusConfig = (status: DownloadTask['status']) => {
   }
 }
 
-const VideoDownloadPage = () => {
+const FileDownloadPage = () => {
   const [outDir, setOutDir] = useStorage<string>('videoDownload.outDir', '')
   const [concurrency, setConcurrency] = useStorage<number>('videoDownload.concurrency', 3)
   const [inputText, setInputText] = useState('')
@@ -347,9 +347,9 @@ const VideoDownloadPage = () => {
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
               <Download className="size-6 text-primary" />
-              视频批量下载
+              文件批量下载
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">支持批量下载直链视频文件</p>
+            <p className="text-sm text-muted-foreground mt-1">支持批量下载直链文件</p>
           </div>
           <GoHome />
         </div>
@@ -668,4 +668,4 @@ const VideoDownloadPage = () => {
   )
 }
 
-export default VideoDownloadPage
+export default FileDownloadPage
