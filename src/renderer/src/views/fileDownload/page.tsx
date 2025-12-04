@@ -87,6 +87,33 @@ const FileDownloadPage = () => {
   const [tasks, setTasks] = useState<DownloadTask[]>([])
   const [disk, setDisk] = useState<{ total: number; free: number }>({ total: 0, free: 0 })
 
+  const hasFileExtension = (name: string) => /\.[^./\\]+$/.test(name)
+
+  const extractExtensionFromUrl = (link: string) => {
+    const fromPath = (path: string) => {
+      const filename = path.split('/').pop() ?? ''
+      const match = filename.match(/(\.[A-Za-z0-9]{1,8})$/)
+      return match ? match[1] : ''
+    }
+
+    try {
+      const url = new URL(link)
+      const ext = fromPath(url.pathname)
+      if (ext) return ext
+    } catch {
+      // ignore
+    }
+
+    const sanitized = link.split(/[?#]/)[0]
+    return fromPath(sanitized)
+  }
+
+  const attachExtensionIfMissing = (name: string, link: string) => {
+    if (hasFileExtension(name)) return name
+    const ext = extractExtensionFromUrl(link)
+    return ext ? `${name}${ext}` : name
+  }
+
   // Choose directory
   const chooseDir = async (): Promise<void> => {
     const r = await window.api.selectDirectory()
@@ -158,10 +185,11 @@ const FileDownloadPage = () => {
         const url = parts[0].trim()
         const fileName = parts[1].trim()
         if (url && fileName) {
+          const normalizedFileName = attachExtensionIfMissing(fileName, url)
           newTasks.push({
             id: Math.random().toString(36).substr(2, 9),
             url,
-            fileName,
+            fileName: normalizedFileName,
             status: 'pending',
             progress: 0,
             totalBytes: 0,
